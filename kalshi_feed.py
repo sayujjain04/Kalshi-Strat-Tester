@@ -15,15 +15,10 @@ re-subscribes on reconnect.
 """
 import asyncio, json, threading, time
 from collections import deque
-from datetime import datetime, timezone
 
 import websockets
 
 from kalshi_client import KalshiClient, PROD, d, fp
-
-
-def _now_iso():
-    return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
 class MarketState:
