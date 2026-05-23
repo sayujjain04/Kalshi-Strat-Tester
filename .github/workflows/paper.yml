@@ -4,7 +4,12 @@ name: paper-tracker
 # Trigger it manually (Actions tab → Run workflow) around tip-off, or let the
 # schedule below fire. It auto-picks the live/upcoming game and stops at game end.
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      game:
+        description: "Team to run (e.g. OKC). Leave blank to auto-pick the live game."
+        required: false
+        default: ""
   schedule:
     # 23:30 UTC ≈ 6:30pm ET (typical NBA tip window). Adjust or remove.
     - cron: "30 23 * * *"
@@ -29,7 +34,7 @@ jobs:
         env:
           KALSHI_KEY_ID: ${{ secrets.KALSHI_KEY_ID }}
           KALSHI_PEM: ${{ secrets.KALSHI_PEM }}
-        run: python3 run_paper.py --auto
+        run: python3 run_paper.py --auto ${{ github.event.inputs.game != '' && format('--match {0}', github.event.inputs.game) || '' }}
 
       - name: Commit game logs
         if: always()              # commit even if the run was cut short

@@ -42,13 +42,19 @@ def choose(prompt, items, render):
         sys.exit(0)
 
 
-def run_live(strategy_keys, auto=False):
+def run_live(strategy_keys, auto=False, match=None):
     client = KalshiClient(PROD)
     print("Finding NBA games on Kalshi…")
     games = engine.list_live_games(client)
     if not games:
         print("No NBA game markets open right now. Try --replay to test on a finished game.")
         return
+    if match:                       # pin a specific game by team (e.g. "OKC")
+        ml = match.lower()
+        games = [x for x in games if ml in x["away"].lower() or ml in x["home"].lower()]
+        if not games:
+            print(f"No game matching '{match}' found right now."); return
+        print(f"Filtered to games matching '{match}'.")
     if auto:
         # headless (cloud): pick a live game, else the soonest upcoming one
         g = next((x for x in games if x["status"] in ("in", "pre")), None)
@@ -110,6 +116,8 @@ def main():
     ap.add_argument("--replay", action="store_true", help="replay a finished game")
     ap.add_argument("--auto", action="store_true",
                     help="headless: auto-pick the live game, no browser, stop at game end (for cloud)")
+    ap.add_argument("--match", default=None,
+                    help="run a specific game by team, e.g. --match OKC")
     ap.add_argument("--strategies", default=",".join(strat.REGISTRY),
                     help="comma-separated: " + ",".join(strat.REGISTRY)
                     + f"  (live-only: {','.join(sorted(strat.LIVE_ONLY))})")
@@ -124,7 +132,7 @@ def main():
     if args.replay:
         run_replay(keys, args.speed)
     else:
-        run_live(keys, auto=args.auto)
+        run_live(keys, auto=args.auto, match=args.match)
 
 
 if __name__ == "__main__":

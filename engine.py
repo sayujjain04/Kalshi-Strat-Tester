@@ -275,6 +275,7 @@ class LiveEngine:
         self.model_series = []
         self.plays = []
         self._stop = False
+        self._settled = False
         import tradelog
         self._gdir = tradelog.game_dir(game_id(self.meta))
         self._declog = tradelog.DecisionLogger(self._gdir, "paper")
@@ -343,6 +344,11 @@ class LiveEngine:
                                                 game_fresh=game_fresh))
                     except Exception as e:
                         self.log(f"{s.label} error: {e}")
+                # when the game ends, settle any still-open paper positions at the
+                # real $1/$0 outcome so P&L is realized (and logged), not left "open"
+                if game.get("status") == "post" and not self._settled:
+                    self._settle_open(game, market)
+                    self._settled = True
                 # log every strategy open/close (raw market + signal + sim) and
                 # the full raw market/game tick stream for later re-simulation
                 self._declog.flush(self.portfolio.accounts, game, market, signal)
@@ -367,6 +373,18 @@ class LiveEngine:
             self.log("Stopped.")
         finally:
             self._save_meta()
+
+    def _settle_open(self, game, market):
+        """Close any open paper position at the final $1/$0 outcome."""
+        sc = game.get("score") or {}
+        if sc.get("home") is None or sc.get("home") == sc.get("away"):
+            return
+        home_won = sc["home"] > sc["away"]
+        yes_won = home_won if self.meta["yes_is_home"] else not home_won
+        for s in self.strategies:
+            if not s.account.flat:
+                s.account.close(market, clock="FINAL",
+                                reason="Game over — settled", settle_yes=yes_won)
 
     def _save_meta(self):
         import tradelog
