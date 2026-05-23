@@ -1,0 +1,8 @@
+# secrets — NEVER commit your Kalshi key
+.secrets/
+*.pem
+
+# local output / caches
+dashboard.html
+__pycache__/
+*.pyc

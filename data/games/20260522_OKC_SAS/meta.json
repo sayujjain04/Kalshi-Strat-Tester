@@ -1,0 +1,13 @@
+{
+ "game_id": "20260522_OKC_SAS",
+ "ticker": "KXNBAGAME-26MAY22OKCSAS-OKC",
+ "away": "OKC",
+ "home": "SAS",
+ "date": "20260522",
+ "yes_team": "OKC",
+ "note": "Game 1 \u2014 2nd half only (tracker started Q3); compacted from old bloated log",
+ "final_score": {
+  "away": null,
+  "home": null
+ }
+}
