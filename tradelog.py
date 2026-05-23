@@ -17,13 +17,23 @@ Each game gets its own folder under data/games/<game_id>/ holding:
 import json, os
 from datetime import datetime, timezone
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "games")
+_ROOT = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(_ROOT, "data", "games")
+RESULTS_DIR = os.path.join(_ROOT, "data", "results")
 
 
 def game_dir(game_id):
     d = os.path.join(DATA_DIR, game_id)
     os.makedirs(d, exist_ok=True)
     return d
+
+
+def append_result(rec):
+    """Append one per-strategy outcome to the results ledger (the strategy
+    performance history across all games + backtests)."""
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    with open(os.path.join(RESULTS_DIR, "strategy_history.jsonl"), "a") as f:
+        f.write(json.dumps({"ts": _now(), **rec}) + "\n")
 
 
 def _now():

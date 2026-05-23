@@ -625,11 +625,43 @@ REGISTRY = {s.key: s for s in [
 
 LIVE_ONLY = {k for k, s in REGISTRY.items() if "orderflow" in s.needs}
 
+# ── versioned params (strategy_params.json) ──────────────────────────────────
+# Tunable params + unit sizes live in strategy_params.json (versioned, with a
+# changelog) so every change is tracked/reversible. Code defaults are the
+# fallback. Edit via the review→approve loop in docs/LAB.md.
+import json as _json
+import os as _os
+_PARAMS_PATH = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                             "strategy_params.json")
+
+
+def load_params():
+    try:
+        return _json.load(open(_PARAMS_PATH)).get("strategies", {})
+    except Exception:
+        return {}
+
+
+def params_version():
+    try:
+        return _json.load(open(_PARAMS_PATH)).get("version")
+    except Exception:
+        return None
+
+
+def make(key, overrides=None):
+    """Build ONE strategy with its configured params (file → code-default
+    fallback). `overrides` lets tuning/backtests inject param variants."""
+    if key not in REGISTRY:
+        raise KeyError(f"Unknown strategy '{key}'. Known: {list(REGISTRY)}")
+    params = dict(load_params().get(key, {}))
+    if overrides:
+        params.update(overrides)
+    s = REGISTRY[key](params=params)
+    if "stake_frac" in params:
+        s.stake_frac = params["stake_frac"]
+    return s
+
 
 def build(keys):
-    out = []
-    for k in keys:
-        if k not in REGISTRY:
-            raise KeyError(f"Unknown strategy '{k}'. Known: {list(REGISTRY)}")
-        out.append(REGISTRY[k]())
-    return out
+    return [make(k) for k in keys]

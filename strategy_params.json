@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "updated": "2026-05-23",
+  "changelog": [
+    {"version": 1, "date": "2026-05-23", "note": "Initial — fee-aware, Kelly-sized values extracted from code. Edit via the review→approve loop (see docs/LAB.md); bump version + add a note on every change."}
+  ],
+  "strategies": {
+    "edge_naive":   {"stake_frac": 0.10, "enter_edge": 0.06, "exit_edge": 0.02},
+    "model_revert": {"stake_frac": 0.10, "enter_edge": 0.15, "exit_edge": 0.03, "persist_s": 30, "hard_stop": 0.05, "time_cap_s": 240},
+    "wp_momentum":  {"stake_frac": 0.10, "vel_min": 0.08, "gap_min": 0.05, "window_s": 60, "exit_edge": 0.02, "hard_stop": 0.05, "time_cap_s": 180},
+    "run_momentum": {"stake_frac": 0.05, "ride": true, "run_threshold": 8, "run_threshold_late": 10, "revert_target": 0.04, "hard_stop": 0.05, "spike_min": 0.0, "time_cap_s": 150},
+    "late_fav":     {"stake_frac": 0.35, "fav_prob": 0.85, "price_max": 0.90, "window_lo": 60, "window_hi": 300, "drop_exit": 0.05, "exit_prob": 0.75, "tp": 0.95},
+    "spread_cap":   {"stake_frac": 0.10, "min_spread": 0.04, "max_flow": 30, "fair_tol": 0.03, "imb": 0.25, "tp": 0.03, "exit_spread": 0.02, "time_cap_s": 90},
+    "flow_confirm": {"stake_frac": 0.15, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20},
+    "conviction":   {"stake_frac": 0.25, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20}
+  }
+}

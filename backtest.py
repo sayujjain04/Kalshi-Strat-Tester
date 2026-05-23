@@ -133,9 +133,20 @@ def fmt(agg, label="results"):
 
 
 if __name__ == "__main__":
-    REPLAYABLE = ["edge_naive", "model_revert", "run_fade", "late_fav"]
+    REPLAYABLE = ["edge_naive", "model_revert", "run_momentum", "late_fav", "conviction"]
     print("Loading games (cached after first run)…")
     dataset = load_all()
     print(f"{len(dataset)} testable games loaded.")
-    agg = run_suite(lambda k: strat.REGISTRY[k](), REPLAYABLE, dataset)
-    fmt(agg, "BASELINE (default params, $20/trade)")
+    agg = run_suite(strat.make, REPLAYABLE, dataset)   # uses strategy_params.json
+    fmt(agg, "BASELINE (params from strategy_params.json)")
+    # record this backtest snapshot in the performance-history ledger
+    import tradelog
+    pv = strat.params_version()
+    for k, a in agg.items():
+        tradelog.append_result({
+            "source": "backtest", "game_id": f"backtest-{len(dataset)}games",
+            "strategy": k, "key": k, "params_version": pv,
+            "net_pnl": round(a["pnl"], 2),
+            "per_game": round(a["pnl"] / a["games"], 2) if a["games"] else 0,
+            "trades": a["trades"], "wins": a["wins"], "losses": a["losses"]})
+    print("\n(logged to data/results/strategy_history.jsonl — run `python3 history.py`)")

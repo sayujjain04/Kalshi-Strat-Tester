@@ -399,6 +399,19 @@ class LiveEngine:
                             "trades": len(s.account.closed)} for s in self.strategies],
             "saved_at": datetime.now(timezone.utc).isoformat(),
         })
+        # append each strategy's outcome to the performance-history ledger
+        import strategies as _strat
+        pv = _strat.params_version()
+        gid = game_id(self.meta)
+        for s in self.strategies:
+            cl = s.account.closed
+            tradelog.append_result({
+                "source": "live", "game_id": gid, "strategy": s.label, "key": s.key,
+                "params_version": pv, "net_pnl": round(s.account.equity(m) - 100, 2),
+                "trades": len(cl), "wins": sum(1 for t in cl if t.result == "WIN"),
+                "losses": sum(1 for t in cl if t.result == "LOSS"),
+                "final_score": g.get("score"),
+            })
 
 
 # ── REPLAY ────────────────────────────────────────────────────────────────────
