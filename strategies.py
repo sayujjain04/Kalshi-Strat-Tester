@@ -619,9 +619,23 @@ class Conviction(Strategy):
             self._pers.reset()
 
 
+# ── 9. Auto House — Claude-owned, auto-tuned (paper-only) ─────────────────────
+# Same logic as Conviction, but its params are re-optimized from accumulated data
+# by auto_tune.py with guardrails (only adopt if it beats current in backtest;
+# versioned + changelogged). Runs in PARALLEL with the user's hand-built
+# strategies for comparison. Never traded with real money.
+class AutoHouse(Conviction):
+    key = "auto_house"
+    label = "Auto House (Claude-owned)"
+    description = ("Claude-owned conviction-style model whose params auto_tune.py "
+                   "re-optimizes from accumulated data (guarded, versioned). "
+                   "Paper-only — never wired to real money.")
+    stake_frac = 0.20
+
+
 REGISTRY = {s.key: s for s in [
     EdgeNaive, ModelRevert, WPMomentum, RunMomentum, LateFav, SpreadCap,
-    FlowConfirm, Conviction]}
+    FlowConfirm, Conviction, AutoHouse]}
 
 LIVE_ONLY = {k for k, s in REGISTRY.items() if "orderflow" in s.needs}
 

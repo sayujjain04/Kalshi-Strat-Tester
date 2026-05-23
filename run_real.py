@@ -47,7 +47,10 @@ def run(strategy_key, capital, max_loss, max_orders, assume_yes):
     client = KalshiClient(PROD)
     if strategy_key not in strat.REGISTRY:
         print(f"Unknown strategy '{strategy_key}'. Known: {list(strat.REGISTRY)}"); return
-    stake_frac = strat.REGISTRY[strategy_key].stake_frac
+    if strategy_key == "auto_house":
+        print("auto_house is the Claude-owned AUTO-TUNED model — paper-only. "
+              "It must never trade real money. Aborting."); return
+    stake_frac = strat.make(strategy_key).stake_frac
 
     print("Finding NBA games on Kalshi…")
     games = engine.list_live_games(client)
@@ -79,7 +82,7 @@ def run(strategy_key, capital, max_loss, max_orders, assume_yes):
     broker = RealBroker(g["ticker"], capital=capital, stake_frac=stake_frac,
                         max_loss=max_loss, max_orders=max_orders, log=log,
                         client=client, game_dir=gdir)
-    strategy = strat.REGISTRY[strategy_key]()
+    strategy = strat.make(strategy_key)
     strategy.account = broker
 
     market_state = KalshiFeed(g["ticker"], PROD, log).start()

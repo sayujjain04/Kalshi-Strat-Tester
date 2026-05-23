@@ -164,7 +164,7 @@ def fmt(agg, label="results"):
 if __name__ == "__main__":
     import sys
     ALL = list(strat.REGISTRY)
-    REPLAYABLE = ["edge_naive", "model_revert", "run_momentum", "late_fav", "conviction"]
+    REPLAYABLE = ["edge_naive", "model_revert", "run_momentum", "late_fav", "conviction", "auto_house"]
 
     if "--captured" in sys.argv:
         # re-simulate over our captured live games (includes real order flow →
