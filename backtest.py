@@ -118,6 +118,35 @@ def run_suite(factory, keys, dataset, stake_frac=None, slippage=None):
     return agg
 
 
+def run_captured(keys, slippage=None):
+    """Re-simulate strategies over CAPTURED live games (data/games/*/ticks.jsonl),
+    which include real order flow. Returns (agg, n_games)."""
+    import glob
+    games_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "games")
+    gdirs = [d for d in glob.glob(os.path.join(games_root, "*"))
+             if os.path.isdir(d) and os.path.exists(os.path.join(d, "ticks.jsonl"))]
+    agg = {k: {"games": 0, "trades": 0, "wins": 0, "losses": 0, "pnl": 0.0,
+               "profitable_games": 0, "worst": 0.0, "best": 0.0} for k in keys}
+    for gdir in gdirs:
+        strategies = [strat.make(k) for k in keys]
+        pf = engine.simulate_captured(gdir, strategies, slippage=slippage)
+        if not pf:
+            continue
+        for st in strategies:
+            acc = st.account
+            a = agg[st.key]
+            a["games"] += 1
+            a["trades"] += len(acc.closed)
+            a["wins"] += sum(1 for t in acc.closed if t.result == "WIN")
+            a["losses"] += sum(1 for t in acc.closed if t.result == "LOSS")
+            gp = acc.realized
+            a["pnl"] += gp
+            a["profitable_games"] += 1 if gp > 0 else 0
+            a["worst"] = min(a["worst"], gp)
+            a["best"] = max(a["best"], gp)
+    return agg, len(gdirs)
+
+
 def fmt(agg, label="results"):
     print(f"\n=== {label} ===")
     print(f"{'strategy':16}{'games':>6}{'trades':>7}{'W/L':>9}{'win%':>6}"
@@ -133,7 +162,17 @@ def fmt(agg, label="results"):
 
 
 if __name__ == "__main__":
+    import sys
+    ALL = list(strat.REGISTRY)
     REPLAYABLE = ["edge_naive", "model_revert", "run_momentum", "late_fav", "conviction"]
+
+    if "--captured" in sys.argv:
+        # re-simulate over our captured live games (includes real order flow →
+        # the live-only strategies can be tested here too)
+        agg, n = run_captured(ALL)
+        fmt(agg, f"CAPTURED live games ({n}) — net of fees+slippage, incl order flow")
+        sys.exit(0)
+
     print("Loading games (cached after first run)…")
     dataset = load_all()
     print(f"{len(dataset)} testable games loaded.")

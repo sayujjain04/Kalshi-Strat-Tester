@@ -15,7 +15,7 @@ Both build the same Context per step, so a strategy can't tell which mode it's
 in (except that order-flow data is empty in replay — Kalshi doesn't publish
 historical depth/tape).
 """
-import threading, time
+import os, threading, time
 from datetime import datetime, timezone
 
 from kalshi_client import KalshiClient, PROD, d, fp
@@ -431,6 +431,69 @@ def fetch_replay_data(espn_id, ticker, client=None):
     candles = fetch_candles(client, ticker, min(times) - 300, max(times) + 300, 1) \
         if times else []
     return {"plays": plays, "wp_by_id": wp_by_id, "candles": candles, "times": times}
+
+
+def simulate_captured(game_dir, strategies, slippage=None):
+    """
+    Re-simulate strategies on a CAPTURED live game (data/games/<id>/), stepping
+    through the real ticks.jsonl — so this includes the actual order flow
+    (imbalance, trade_flow, spread, sizes) that Kalshi keeps no history for. This
+    is how order-flow strategies get backtested on real data. Returns a Portfolio.
+    """
+    import json as _j
+    import paper_broker
+    meta_path = os.path.join(game_dir, "meta.json")
+    ticks_path = os.path.join(game_dir, "ticks.jsonl")
+    if not os.path.exists(ticks_path):
+        return None
+    meta_file = _j.load(open(meta_path)) if os.path.exists(meta_path) else {}
+    meta = parse_ticker(meta_file.get("ticker", os.path.basename(game_dir)))
+    if not meta:
+        return None
+    ticks = [_j.loads(l) for l in open(ticks_path)]
+    if not ticks:
+        return None
+
+    slip = paper_broker.DEFAULT_SLIPPAGE if slippage is None else slippage
+    portfolio = Portfolio(100.0, slippage=slip, log=lambda *a: None)
+    for s in strategies:
+        s.account = portfolio.account_for(s.label, s.stake_frac)
+
+    hist, wp_hist, last_sig, last_market = [], [], None, {}
+    for t in ticks:
+        m = dict(t.get("market") or {})
+        g = dict(t.get("game") or {})
+        ts_ms = int((_iso_to_unix(t.get("ts")) or 0) * 1000)
+        if m.get("mid") is not None:
+            hist.append((ts_ms, m["mid"]))
+        m["history"] = hist
+        m.setdefault("trades", [])
+        if g.get("win_prob_home") is not None:
+            wp_hist.append((g.get("win_prob_ts") or ts_ms, g["win_prob_home"]))
+        g["wp_history"] = wp_hist
+        sc = g.get("score") or {}
+        sig = (g.get("win_prob_ts"), sc.get("home"), sc.get("away"), g.get("clock"))
+        game_fresh = sig != last_sig
+        last_sig = sig
+        last_market = m
+        for s in strategies:
+            try:
+                s.evaluate(make_context(s, m, g, meta, s.account,
+                                        is_replay=False, now_ts=ts_ms, game_fresh=game_fresh))
+            except Exception:
+                pass
+
+    # settle open positions on the final outcome
+    fs = meta_file.get("final_score") or (ticks[-1].get("game") or {}).get("score") or {}
+    yes_won = None
+    if fs.get("home") is not None and fs.get("home") != fs.get("away"):
+        home_won = fs["home"] > fs["away"]
+        yes_won = home_won if meta["yes_is_home"] else not home_won
+    for s in strategies:
+        if not s.account.flat:
+            s.account.close(last_market, clock="FINAL",
+                            reason="Game over — settled", settle_yes=yes_won)
+    return portfolio
 
 
 def simulate(meta, data, strategies, frame_cb=None, log=lambda *a: None, slippage=None):
