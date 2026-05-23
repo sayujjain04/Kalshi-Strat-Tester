@@ -87,6 +87,40 @@ def run_live(strategy_keys, auto=False, match=None):
     eng.run(stop_on_post=auto)        # headless runs exit when the game ends
 
 
+def _push_data(label):
+    import subprocess
+    for cmd in (["git", "add", "data/"],
+                ["git", "commit", "-m", f"data: {label}"],
+                ["git", "push"]):
+        subprocess.run(cmd, check=False)
+    print("pushed data/ to repo")
+
+
+def run_daemon(strategy_keys, push=True):
+    """Continuous mode for the always-on VM: track each live/upcoming game,
+    then push its data to the repo, then wait for the next. Ctrl+C to stop."""
+    import time
+    client = KalshiClient(PROD)
+    print("DAEMON: continuous paper tracking (auto-tracks each game). Ctrl+C to stop.")
+    while True:
+        try:
+            games = engine.list_live_games(client)
+            g = next((x for x in games if x["status"] in ("in", "pre")), None)
+            if not g or not g["espn_id"]:
+                time.sleep(300); continue
+            print(f"Tracking {g['away']} @ {g['home']} [{g['status'].upper()}] {g['ticker']}")
+            eng = engine.LiveEngine(g["ticker"], g["espn_id"],
+                                    strat.build(strategy_keys), OUT, refresh=5)
+            eng.run(stop_on_post=True)         # blocks until the game ends
+            if push:
+                _push_data(f"{g['away']}@{g['home']} {g['ticker']}")
+        except KeyboardInterrupt:
+            print("daemon stopped."); break
+        except Exception as e:
+            print(f"daemon error: {e} — retry in 60s"); time.sleep(60)
+        time.sleep(30)
+
+
 def run_replay(strategy_keys, speed):
     client = KalshiClient(PROD)
     print("Finding recently finished NBA games…")
@@ -118,6 +152,8 @@ def main():
                     help="headless: auto-pick the live game, no browser, stop at game end (for cloud)")
     ap.add_argument("--match", default=None,
                     help="run a specific game by team, e.g. --match OKC")
+    ap.add_argument("--daemon", action="store_true",
+                    help="continuous: auto-track every game + push data to repo (for the VM)")
     ap.add_argument("--strategies", default=",".join(strat.REGISTRY),
                     help="comma-separated: " + ",".join(strat.REGISTRY)
                     + f"  (live-only: {','.join(sorted(strat.LIVE_ONLY))})")
@@ -131,6 +167,8 @@ def main():
         sys.exit(1)
     if args.replay:
         run_replay(keys, args.speed)
+    elif args.daemon:
+        run_daemon(keys)
     else:
         run_live(keys, auto=args.auto, match=args.match)
 

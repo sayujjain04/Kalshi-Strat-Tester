@@ -42,8 +42,11 @@ Read this first if you're Claude in a new session — it's how we work here.
 | `python3 backtest.py` | backtest replayable strategies over all past games |
 | `python3 summary.py [game_id]` | net P&L per strategy for one game |
 | `python3 history.py [strategy]` | how strategies have fared over time (the ledger) |
-| `python3 analyze.py` *(Phase B)* | trends → writes `docs/INSIGHTS.md` |
-| `python3 tune.py` *(Phase B)* | param sweep over all data → robust settings |
+| `python3 analyze.py` | trends → writes `docs/INSIGHTS.md` |
+| `python3 backtest.py --captured` | re-simulate captured live games (incl order flow) |
+| `python3 tune.py <strat> <param> <v...>` | sweep a param over all data → robust value |
+| `python3 auto_tune.py [--dry]` | guarded auto-tune of the `auto_house` model only |
+| `python3 run_paper.py --daemon` | continuous (VM): auto-track every game + push data |
 
 ## Where data lives
 - `data/games/<date>_<away>_<home>/` — per game: `ticks.jsonl` (market+game on
@@ -71,6 +74,15 @@ fallback via `self.p`). **Every change:** edit the value, bump `version`, add a
 which results.
 
 ## Deploy
-- **Paper** → Oracle Always-Free VM, `run_paper.py --daemon` *(Phase D)*, pushes
-  data to the repo. (GitHub Actions is the interim/backup path.)
-- **Real** → local only, `run_real.py`, attended. Never in the cloud.
+- **Paper** → Oracle Always-Free VM running `run_paper.py --daemon` (auto-tracks
+  every game, serves the live dashboard, pushes data to the repo). Setup:
+  `docs/DEPLOY_VM.md`. GitHub Actions (`docs/DEPLOY.md`) is the backup path.
+- **Real** → local only, `run_real.py`, attended. Never in the cloud; the
+  `auto_house` model is paper-only and `run_real.py` refuses it.
+
+## The auto_house model (Claude-owned)
+A conviction-style model whose params Claude re-optimizes from accumulated data
+via `auto_tune.py` — guarded (only adopts a config that beats current by ≥10% in
+backtest), versioned (bumps `strategy_params.json` + changelog). Runs in paper
+parallel to the user's strategies for comparison. Run `auto_tune.py` as live data
+grows; it self-adjusts safely. The user's strategies are NEVER auto-tuned.
