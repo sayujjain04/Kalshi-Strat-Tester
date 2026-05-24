@@ -4,6 +4,7 @@
 
 # local output / caches
 dashboard.html
+dashboards/
 __pycache__/
 *.pyc
 

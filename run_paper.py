@@ -96,29 +96,55 @@ def _push_data(label):
     print("pushed data/ to repo")
 
 
-def run_daemon(strategy_keys, push=True):
-    """Continuous mode for the always-on VM: track each live/upcoming game,
-    then push its data to the repo, then wait for the next. Ctrl+C to stop."""
-    import time
+def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120):
+    """Always-on VM mode: capture EVERY basketball game (all leagues) CONCURRENTLY.
+    Spawns a capture thread per game (each → its own data/games/<id>/ + dashboard),
+    reaps them at game end, and periodically pushes data to the repo. Ctrl+C stops."""
+    import os, threading, time
     client = KalshiClient(PROD)
-    print("DAEMON: continuous paper tracking (auto-tracks each game). Ctrl+C to stop.")
-    while True:
+    dash_dir = os.path.join(os.path.dirname(OUT), "dashboards")
+    os.makedirs(dash_dir, exist_ok=True)
+    active = {}                       # game_id -> capture thread
+    print("DAEMON: capturing ALL basketball games concurrently (all leagues). Ctrl+C to stop.")
+
+    def capture(g):
         try:
-            games = engine.list_live_games(client)
-            g = next((x for x in games if x["status"] in ("in", "pre")), None)
-            if not g or not g["espn_id"]:
-                time.sleep(300); continue
-            print(f"Tracking {g['away']} @ {g['home']} [{g['status'].upper()}] {g['ticker']}")
-            eng = engine.LiveEngine(g["ticker"], g["espn_id"],
-                                    strat.build(strategy_keys), OUT, refresh=5)
-            eng.run(stop_on_post=True)         # blocks until the game ends
-            if push:
-                _push_data(f"{g['away']}@{g['home']} {g['ticker']}")
-        except KeyboardInterrupt:
-            print("daemon stopped."); break
+            meta = engine.parse_ticker(g["ticker"])
+            out = os.path.join(dash_dir, f"{engine.game_id(meta)}.html")
+            engine.LiveEngine(g["ticker"], g["espn_id"], strat.build(strategy_keys),
+                              out, refresh=5).run(stop_on_post=True)
         except Exception as e:
-            print(f"daemon error: {e} — retry in 60s"); time.sleep(60)
-        time.sleep(30)
+            print(f"capture error {g.get('ticker')}: {e}")
+
+    def pusher():
+        while True:
+            time.sleep(push_every_s)
+            try:
+                _push_data("daemon periodic")
+            except Exception as e:
+                print(f"push error: {e}")
+
+    threading.Thread(target=pusher, daemon=True).start()
+    try:
+        while True:
+            try:
+                games = engine.list_live_games(client)
+            except Exception as e:
+                print(f"discovery error: {e}"); time.sleep(scan_every_s); continue
+            for g in games:
+                # ESPN-matched live/upcoming games stop cleanly at game end;
+                # unmatched games are skipped for now (no clean stop signal).
+                if g["status"] not in ("in", "pre") or not g["espn_id"]:
+                    continue
+                gid = engine.game_id(engine.parse_ticker(g["ticker"]))
+                if gid in active and active[gid].is_alive():
+                    continue
+                t = threading.Thread(target=capture, args=(g,), daemon=True)
+                t.start(); active[gid] = t
+                print(f"▶ capturing [{g['league']}] {g['away']}@{g['home']} ({gid})")
+            time.sleep(scan_every_s)
+    except KeyboardInterrupt:
+        print("daemon stopped.")
 
 
 def run_replay(strategy_keys, speed):
