@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 
 from kalshi_client import KalshiClient, PROD, d, fp
 from kalshi_feed import KalshiFeed
-from espn_feed import ESPNFeed, espn_abbr
+from espn_feed import ESPNFeed, espn_abbr, LEAGUES, sport_for, league_for
 from paper_broker import Portfolio
 from strategies import Context
 import dashboard
@@ -32,19 +32,27 @@ _MONTHS = {"JAN": "01", "FEB": "02", "MAR": "03", "APR": "04", "MAY": "05",
 
 # ── ticker parsing ────────────────────────────────────────────────────────────
 def parse_ticker(ticker):
-    """KXNBAGAME-26MAY22OKCSAS-OKC → date/away/home/yes_team/yes_is_home."""
-    try:
-        _, mid, yes_team = ticker.split("-")[:3]
-    except ValueError:
+    """KX<LEAGUE>GAME-<YYMONDD><AWAY><HOME>-<YESTEAM> → parsed dict, any league.
+    Splits the team blob on the YES-team suffix (robust to 2–4 char codes), so it
+    works for NBA *and* WNBA/NCAA — not just 3-letter NBA codes."""
+    parts = ticker.split("-")
+    if len(parts) < 3:
         return None
+    series, mid, yes_team = parts[0], parts[1], parts[2]
     for mon, num in _MONTHS.items():
         if mon in mid:
             i = mid.index(mon)
             yr, rest = "20" + mid[:i], mid[i + 3:]
             day, teams = rest[:2], rest[2:]
-            away, home = teams[:3], teams[3:]
+            if teams.endswith(yes_team):
+                away, home, yih = teams[:-len(yes_team)], yes_team, True
+            elif teams.startswith(yes_team):
+                away, home, yih = yes_team, teams[len(yes_team):], False
+            else:                                       # fallback: NBA-style 3/3
+                away, home, yih = teams[:3], teams[3:], yes_team == teams[3:]
             return {"date": f"{yr}{num}{day}", "away": away, "home": home,
-                    "yes_team": yes_team, "yes_is_home": yes_team == home}
+                    "yes_team": yes_team, "yes_is_home": yih,
+                    "series": series, "league": league_for(series)}
     return None
 
 
@@ -56,8 +64,9 @@ def _iso_to_unix(s):
 
 
 def game_id(meta):
-    """Readable per-game folder name, e.g. '20260522_OKC_SAS'."""
-    return f"{meta['date']}_{meta['away']}_{meta['home']}"
+    """Readable per-game folder name, e.g. '20260525_WNBA_PDX_NY'."""
+    lg = meta.get("league") or "X"
+    return f"{meta['date']}_{lg}_{meta['away']}_{meta['home']}"
 
 
 # ── candles ─────────────────────────────────────────────────────────────────
@@ -168,37 +177,42 @@ def build_vm(meta, market, game, candles, model_series, plays, portfolio,
 
 
 # ── discovery ─────────────────────────────────────────────────────────────────
-def list_live_games(client, log=print):
-    """All NBA games on Kalshi today-ish, annotated with ESPN status/score."""
-    markets = client.markets(series_ticker="KXNBAGAME", status="open", limit=200)
-    games = {}
-    for m in markets:
-        p = parse_ticker(m["ticker"])
-        if not p:
-            continue
-        key = (p["date"], p["away"], p["home"])
-        g = games.setdefault(key, {**p, "tickers": []})
-        g["tickers"].append(m["ticker"])
+def list_live_games(client, log=print, leagues=None):
+    """Every basketball game open on Kalshi across leagues (NBA/WNBA/NCAA),
+    each tagged with league + ESPN status/score. `leagues` optionally restricts to
+    specific Kalshi series."""
     out = []
-    for (date, away, home), g in games.items():
-        eid = ESPNFeed.find_event_id(date, away, home, log=lambda *_: None)
-        status, score = "pre", {"home": 0, "away": 0}
-        if eid:
-            status, score = _espn_status(eid)
-        # canonical ticker = the AWAY team's YES market
-        canonical = next((t for t in g["tickers"] if t.endswith(away)), g["tickers"][0])
-        out.append({"ticker": canonical, "date": date, "away": away, "home": home,
-                    "yes_team": parse_ticker(canonical)["yes_team"],
-                    "espn_id": eid, "status": status, "score": score})
+    for series, (league, sport) in LEAGUES.items():
+        if leagues and series not in leagues:
+            continue
+        markets = client.markets(series_ticker=series, status="open", limit=200)
+        games = {}
+        for m in markets:
+            p = parse_ticker(m["ticker"])
+            if not p:
+                continue
+            key = (p["date"], p["away"], p["home"])
+            g = games.setdefault(key, {**p, "tickers": []})
+            g["tickers"].append(m["ticker"])
+        for (date, away, home), g in games.items():
+            eid = ESPNFeed.find_event_id(date, away, home, log=lambda *_: None, sport=sport)
+            status, score = "pre", {"home": 0, "away": 0}
+            if eid:
+                status, score = _espn_status(eid, sport)
+            canonical = next((t for t in g["tickers"] if t.endswith(away)), g["tickers"][0])
+            out.append({"ticker": canonical, "date": date, "away": away, "home": home,
+                        "league": league, "sport": sport,
+                        "yes_team": parse_ticker(canonical)["yes_team"],
+                        "espn_id": eid, "status": status, "score": score})
     order = {"in": 0, "pre": 1, "post": 2}
     out.sort(key=lambda x: (order.get(x["status"], 3), x["date"]))
     return out
 
 
-def _espn_status(eid):
+def _espn_status(eid, sport="basketball/nba"):
     import requests
     try:
-        r = requests.get(f"http://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary",
+        r = requests.get(f"http://site.api.espn.com/apis/site/v2/sports/{sport}/summary",
                          params={"event": eid}, timeout=12,
                          headers={"User-Agent": "r/2.0"}).json()
         comp = r.get("header", {}).get("competitions", [{}])[0]
@@ -309,7 +323,8 @@ class LiveEngine:
         self.market_state = KalshiFeed(self.ticker, PROD, self.log).start()
         # poll ESPN every 5s (not 15) — shrinks every lag window by ~2/3
         espn = ESPNFeed(self.espn_id, self.meta["away"], self.meta["home"],
-                        poll_secs=5, log=self.log, on_new_plays=self._on_plays)
+                        poll_secs=5, log=self.log, on_new_plays=self._on_plays,
+                        sport=sport_for(self.meta.get("series", "KXNBAGAME")))
         self.game_state = espn.start()
         post_seen = 0
         threading.Thread(target=self._candle_poller, daemon=True).start()
@@ -419,7 +434,9 @@ def fetch_replay_data(espn_id, ticker, client=None):
     """Pull a finished game's plays + win-prob + candles. Returns dict or None."""
     import requests
     client = client or KalshiClient(PROD)
-    ESPN = "http://site.api.espn.com/apis/site/v2/sports/basketball/nba"
+    p = parse_ticker(ticker)
+    sport = sport_for(p["series"]) if p else "basketball/nba"
+    ESPN = f"http://site.api.espn.com/apis/site/v2/sports/{sport}"
     summ = requests.get(f"{ESPN}/summary", params={"event": espn_id}, timeout=20,
                         headers={"User-Agent": "r/2.0"}).json()
     plays = summ.get("plays") or []

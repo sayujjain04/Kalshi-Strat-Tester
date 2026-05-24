@@ -19,9 +19,28 @@ from datetime import datetime, timezone
 
 import requests
 
-ESPN_BASE = "http://site.api.espn.com/apis/site/v2/sports/basketball/nba"
+ESPN_ROOT = "http://site.api.espn.com/apis/site/v2/sports"
+ESPN_BASE = f"{ESPN_ROOT}/basketball/nba"   # default; per-league via `sport`
 
-# Kalshi 3-letter code → ESPN abbreviation (mostly identical; these differ)
+# Kalshi game-winner series → (league label, ESPN sport path)
+LEAGUES = {
+    "KXNBAGAME":  ("NBA",   "basketball/nba"),
+    "KXWNBAGAME": ("WNBA",  "basketball/wnba"),
+    "KXNCAABGAME": ("NCAAM", "basketball/mens-college-basketball"),
+    "KXNCAAMGAME": ("NCAAM", "basketball/mens-college-basketball"),
+    "KXNCAAWGAME": ("NCAAW", "basketball/womens-college-basketball"),
+}
+
+
+def sport_for(series):
+    return LEAGUES.get(series, ("?", "basketball/nba"))[1]
+
+
+def league_for(series):
+    return LEAGUES.get(series, (series.replace("KX", "").replace("GAME", ""), ""))[0]
+
+
+# Kalshi → ESPN abbreviation overrides (NBA differs in a few; other leagues mostly match)
 TEAM_MAP = {
     "BRK": "BKN", "GSW": "GS", "NOR": "NO", "NYK": "NY",
     "PHX": "PHX", "SAS": "SA", "UTA": "UTAH",
@@ -30,6 +49,18 @@ TEAM_MAP = {
 
 def espn_abbr(kalshi_code):
     return TEAM_MAP.get(kalshi_code, kalshi_code)
+
+
+def _codes_match(kalshi_code, espn_abbr_str):
+    """Lenient team match across leagues: exact, mapped, or a shared 2+ char prefix
+    (handles Kalshi vs ESPN abbreviation differences without a full per-league map)."""
+    if not kalshi_code or not espn_abbr_str:
+        return False
+    k, e = kalshi_code.upper(), espn_abbr_str.upper()
+    if k == e or espn_abbr(kalshi_code).upper() == e:
+        return True
+    n = min(len(k), len(e))
+    return n >= 2 and (k.startswith(e[:n]) or e.startswith(k[:n]))
 
 
 def _wallclock_ms(s):
@@ -81,9 +112,10 @@ class GameState:
 
 class ESPNFeed:
     def __init__(self, espn_id, away, home, poll_secs=20, log=print,
-                 on_new_plays=None):
+                 on_new_plays=None, sport="basketball/nba"):
         """on_new_plays(GameState, list_of_new_plays) fires after each poll."""
         self.espn_id = espn_id
+        self.base = f"{ESPN_ROOT}/{sport}"
         self.state = GameState(away, home)
         self.poll_secs = poll_secs
         self.log = log
@@ -94,11 +126,11 @@ class ESPNFeed:
 
     # ----- discovery -----
     @staticmethod
-    def find_event_id(date_str, away, home, log=print):
-        a, h = espn_abbr(away), espn_abbr(home)
+    def find_event_id(date_str, away, home, log=print, sport="basketball/nba"):
         try:
-            r = requests.get(f"{ESPN_BASE}/scoreboard", params={"dates": date_str},
-                             timeout=12)
+            r = requests.get(f"{ESPN_ROOT}/{sport}/scoreboard",
+                             params={"dates": date_str}, timeout=12,
+                             headers={"User-Agent": "KalshiResearch/2.0"})
             data = r.json() if r.status_code == 200 else {}
         except Exception as e:
             log(f"ESPN scoreboard error: {e}")
@@ -107,7 +139,8 @@ class ESPNFeed:
             comp = ev.get("competitions", [{}])[0]
             abbs = [c.get("team", {}).get("abbreviation", "")
                     for c in comp.get("competitors", [])]
-            if a in abbs and h in abbs:
+            if any(_codes_match(away, x) for x in abbs) and \
+               any(_codes_match(home, x) for x in abbs):
                 return ev["id"]
         return None
 
@@ -121,7 +154,7 @@ class ESPNFeed:
 
     def _fetch_plays(self):
         try:
-            r = self.sess.get(f"{ESPN_BASE}/summary",
+            r = self.sess.get(f"{self.base}/summary",
                               params={"event": self.espn_id}, timeout=15)
             if r.status_code != 200:
                 return None
