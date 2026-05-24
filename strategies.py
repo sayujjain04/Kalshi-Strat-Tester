@@ -545,10 +545,15 @@ class FlowConfirm(Strategy):
                 b.close(m, clock=ctx.clock, reason="Locked near settlement"); self._against = 0; return
             if fav_model is not None and fav_model < self.p("bail_prob", 0.65):
                 b.close(m, clock=ctx.clock, reason=f"Lead collapsed (model {fav_model:.0%})"); self._against = 0; return
-            # flow-specific value-add: exit if smart money flips against us 2 ticks
-            self._against = self._against + 1 if not _flow_confirms(ctx, t.side) else 0
-            if self._against >= 2:
-                b.close(m, clock=ctx.clock, reason="Order flow flipped against us"); self._against = 0
+            # flow-reversal exit — DISABLED by default. In 2 captured games it fired
+            # every few ticks (flow oscillates) and turned a hold into a fee-bleeding
+            # scalp (−$7/game vs conviction's +$6). Set flow_exit_ticks>0 to re-enable
+            # with a higher (sustained) threshold; default 0 = hold to settlement.
+            fe = self.p("flow_exit_ticks", 0)
+            if fe:
+                self._against = self._against + 1 if not _flow_confirms(ctx, t.side) else 0
+                if self._against >= fe:
+                    b.close(m, clock=ctx.clock, reason="Order flow flipped against us (sustained)"); self._against = 0
             return
         if not self._live(ctx) or mp is None or ap is None:
             return

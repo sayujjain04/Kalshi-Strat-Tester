@@ -1,9 +1,10 @@
 {
-  "version": 2,
-  "updated": "2026-05-23",
+  "version": 3,
+  "updated": "2026-05-24",
   "changelog": [
     {"version": 1, "date": "2026-05-23", "note": "Initial — fee-aware, Kelly-sized values extracted from code. Edit via the review→approve loop (see docs/LAB.md); bump version + add a note on every change."},
-    {"version": 2, "date": "2026-05-23", "note": "Added auto_house (Claude-owned, auto-tuned model) seeded from conviction's config."}
+    {"version": 2, "date": "2026-05-23", "note": "Added auto_house (Claude-owned, auto-tuned model) seeded from conviction's config."},
+    {"version": 3, "date": "2026-05-24", "note": "flow_confirm: disabled the flow-flip exit (flow_exit_ticks=0) — it over-scalped a hold in 2 captured games (−$7/game). Now holds to settlement like conviction; flow stays an entry gate only."}
   ],
   "strategies": {
     "auto_house":   {"stake_frac": 0.20, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20},
@@ -13,7 +14,7 @@
     "run_momentum": {"stake_frac": 0.05, "ride": true, "run_threshold": 8, "run_threshold_late": 10, "revert_target": 0.04, "hard_stop": 0.05, "spike_min": 0.0, "time_cap_s": 150},
     "late_fav":     {"stake_frac": 0.35, "fav_prob": 0.85, "price_max": 0.90, "window_lo": 60, "window_hi": 300, "drop_exit": 0.05, "exit_prob": 0.75, "tp": 0.95},
     "spread_cap":   {"stake_frac": 0.10, "min_spread": 0.04, "max_flow": 30, "fair_tol": 0.03, "imb": 0.25, "tp": 0.03, "exit_spread": 0.02, "time_cap_s": 90},
-    "flow_confirm": {"stake_frac": 0.15, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20},
+    "flow_confirm": {"stake_frac": 0.15, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20, "flow_exit_ticks": 0},
     "conviction":   {"stake_frac": 0.25, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20}
   }
 }
