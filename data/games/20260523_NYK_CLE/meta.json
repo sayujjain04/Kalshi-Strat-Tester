@@ -1,0 +1,62 @@
+{
+ "game_id": "20260523_NYK_CLE",
+ "ticker": "KXNBAGAME-26MAY23NYKCLE-NYK",
+ "mode": "paper",
+ "away": "NYK",
+ "home": "CLE",
+ "date": "20260523",
+ "yes_team": "NYK",
+ "final_score": {
+  "home": 108,
+  "away": 121
+ },
+ "final_status": "post",
+ "strategies": [
+  {
+   "strategy": "Edge (naive control)",
+   "equity": 102.54,
+   "trades": 4
+  },
+  {
+   "strategy": "Mean-Reversion to Model",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Win-Prob Momentum",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Run Momentum",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Late-Game Favorite Lock",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Spread Capture",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Conviction + Flow Gate",
+   "equity": 92.74,
+   "trades": 10
+  },
+  {
+   "strategy": "Conviction Hold",
+   "equity": 105.87,
+   "trades": 2
+  },
+  {
+   "strategy": "Auto House (Claude-owned)",
+   "equity": 104.69,
+   "trades": 2
+  }
+ ],
+ "saved_at": "2026-05-24T02:46:30.880738+00:00"
+}
