@@ -48,9 +48,32 @@ User=$USER_NAME
 WantedBy=multi-user.target
 EOF
 
+# the deterministic daily lab cycle (analyze + auto-tune auto_house + boards +
+# report + commit). No LLM needed for this layer — plain cron/timer.
+sudo tee /etc/systemd/system/lab-cycle.service >/dev/null <<EOF
+[Unit]
+Description=Kalshi lab cycle (analyze, auto-tune, boards, report, commit)
+[Service]
+Type=oneshot
+WorkingDirectory=$REPO_DIR
+ExecStart=/usr/bin/python3 $REPO_DIR/lab_cycle.py
+User=$USER_NAME
+EOF
+sudo tee /etc/systemd/system/lab-cycle.timer >/dev/null <<EOF
+[Unit]
+Description=Run the Kalshi lab cycle daily
+[Timer]
+OnCalendar=*-*-* 09:00:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target
+EOF
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now paper-daemon kalshi-dashboard
+sudo systemctl enable --now lab-cycle.timer
 echo "==> Done."
-echo "   Dashboard:  http://<YOUR_VM_PUBLIC_IP>:8000/dashboard.html"
-echo "   Logs:       journalctl -u paper-daemon -f"
+echo "   Boards:     http://<YOUR_VM_PUBLIC_IP>:8000/boards.html"
+echo "   Game shard: http://<YOUR_VM_PUBLIC_IP>:8000/dashboards/<game_id>.html"
+echo "   Logs:       journalctl -u paper-daemon -f   (and -u lab-cycle)"
 echo "   (Open port 8000 in the Oracle security list AND: sudo ufw allow 8000)"

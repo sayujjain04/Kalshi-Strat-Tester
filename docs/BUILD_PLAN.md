@@ -5,6 +5,30 @@ describes: **(1) auto capture+test all games, (2) the Board, (3) the auto lab
 brain** — zero manual trigger; real money the only founder gate. Check items off
 as we restructure. Goal: deploy with no dead/BS code.
 
+## ✅ Done in the 2026-05-24 autonomous session
+- **flow_confirm fixed** (disabled flow-flip exit → holds to settlement; +$3/game on captured games).
+- **Multi-league discovery** (NBA + WNBA live; NCAA wired for season) + league tagging +
+  `parse_ticker` rewritten (suffix-split — fixes WNBA) + ESPN feed per-sport + league-tagged game ids.
+- **Concurrent multi-game daemon** (`run_paper.py --daemon` now captures ALL games at once,
+  thread per game, isolated data + strategy sets, periodic push).
+- **The Board** (`boards.py` → `boards.html`): paper-vs-live stats per strategy from the ledger,
+  wallet-vs-floor, today's slate linking to per-game dashboards. State in `boards.json`
+  (`--promote`/`--retire`/`--move`).
+- **Lab cycle** (`lab_cycle.py`): the *deterministic, no-LLM* auto-improve routine —
+  analyze → guarded auto-tune of `auto_house` → rebuild boards → investor report → commit.
+  **Schedulable with plain cron** (no LLM needed for this layer).
+- Per-game dashboards written by the daemon (`dashboards/<id>.html`) = the drill-in shards.
+
+## ⏳ Remaining (bigger build / needs founder)
+- **Isolated multi-strategy LIVE capital ledger** (real_broker is single-strategy) + per-wallet
+  −50% floor. Needs real-money design + founder gate.
+- **Cross-game edge/confidence allocation engine** (strategies still bet per-game independently).
+- **Scheduling on the VM:** cron/systemd timer for `lab_cycle.py` (easy, deterministic) + the
+  always-on daemon (done in `setup.sh`). The *creative* LLM brain (headless Claude inventing
+  new strategy code) is a separate optional layer on top.
+- **ESPN-less order-flow capture** (games with no ESPN match are currently skipped).
+- **VM deploy itself** (founder runs `docs/DEPLOY_VM.md`) · SQLite only if scale demands.
+
 ## Where we are today (reuse, don't rebuild)
 NBA single-game only, one game at a time. Have: `run_paper.py` (--daemon/--match/
 --replay), `run_real.py` (single-strategy, attended), `backtest.py` (+--captured),

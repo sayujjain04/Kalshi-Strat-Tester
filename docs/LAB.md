@@ -42,6 +42,9 @@ Read this first if you're Claude in a new session — it's how we work here.
 | `python3 backtest.py` | backtest replayable strategies over all past games |
 | `python3 summary.py [game_id]` | net P&L per strategy for one game |
 | `python3 history.py [strategy]` | how strategies have fared over time (the ledger) |
+| `python3 boards.py` | rebuild `boards.html` (founder source of truth); `--promote`/`--retire`/`--move` |
+| `python3 lab_cycle.py` | the auto cycle: analyze→auto-tune→boards→report→commit (cron-scheduled on VM) |
+| `python3 run_paper.py --daemon` | capture ALL games (all leagues) concurrently (VM) |
 | `python3 analyze.py` | trends → writes `docs/INSIGHTS.md` |
 | `python3 backtest.py --captured` | re-simulate captured live games (incl order flow) |
 | `python3 tune.py <strat> <param> <v...>` | sweep a param over all data → robust value |

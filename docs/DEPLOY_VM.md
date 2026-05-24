@@ -34,12 +34,22 @@ bash deploy/setup.sh
 sudo ufw allow 8000 || true
 ```
 
+`setup.sh` installs three things: the **paper daemon** (captures every game across
+leagues, concurrently), an **HTTP server** for the dashboards, and a **daily
+lab-cycle timer** (deterministic: analyze → auto-tune `auto_house` → rebuild
+boards → report → commit; no LLM needed).
+
 ## 3. Use it
-- **Live dashboard:** `http://<VM_PUBLIC_IP>:8000/dashboard.html` — open it any time,
-  any device. It updates as games run.
-- **Logs:** `journalctl -u paper-daemon -f`
-- **Data:** each finished game is pushed to `data/games/` in the repo. Locally,
-  `git pull` then `python3 summary.py` / `analyze.py` / `history.py`.
+- **Boards (your home view):** `http://<VM_PUBLIC_IP>:8000/boards.html` — paper vs
+  live per strategy, today's slate. Open from any device.
+- **Per-game shard:** `http://<VM_PUBLIC_IP>:8000/dashboards/<game_id>.html`.
+- **Logs:** `journalctl -u paper-daemon -f` (capture) · `journalctl -u lab-cycle` (cycle).
+- **Data:** games + reports push to the repo automatically. Locally `git pull` then
+  `python3 boards.py` / `summary.py` / `history.py`.
+
+The *creative* LLM brain (headless Claude inventing new strategy code) is an
+optional layer on top — the daemon + lab-cycle timer already self-improve
+`auto_house` and refresh everything with no LLM.
 
 ## Notes
 - The daemon auto-tracks the current live game (or waits for the soonest upcoming
