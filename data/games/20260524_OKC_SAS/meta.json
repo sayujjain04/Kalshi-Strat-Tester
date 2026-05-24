@@ -1,0 +1,62 @@
+{
+ "game_id": "20260524_OKC_SAS",
+ "ticker": "KXNBAGAME-26MAY24OKCSAS-OKC",
+ "mode": "paper",
+ "away": "OKC",
+ "home": "SAS",
+ "date": "20260524",
+ "yes_team": "OKC",
+ "final_score": {
+  "home": 0,
+  "away": 0
+ },
+ "final_status": "pre",
+ "strategies": [
+  {
+   "strategy": "Edge (naive control)",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Mean-Reversion to Model",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Win-Prob Momentum",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Run Momentum",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Late-Game Favorite Lock",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Spread Capture",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Conviction + Flow Gate",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Conviction Hold",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Auto House (Claude-owned)",
+   "equity": 100.0,
+   "trades": 0
+  }
+ ],
+ "saved_at": "2026-05-24T17:39:16.616517+00:00"
+}
