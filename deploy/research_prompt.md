@@ -26,8 +26,9 @@ Your job is to make the lab measurably better over time, not to tinker. Every ru
 3. **Maintain the experiment ledger**: update status (open/validated/killed/paused) and
    sample_n on existing experiments as evidence accumulates; pre-register any NEW
    experiment (hypothesis + mechanism + edge_type + what would falsify it) before testing.
-4. **End the run** by running `python3 metrics.py` then `python3 boards.py` so the trend
-   + board reflect this run.
+4. **End the run** by running `python3 metrics.py`. Do NOT run `git` and do NOT
+   regenerate `docs/` — the runner commits your file changes for you, and the always-on
+   VM regenerates the board. Just make your edits + append to the logs below.
 
 ## How much to do
 Do **as many high-value actions as are genuinely warranted** this run — and **do nothing**

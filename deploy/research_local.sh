@@ -26,7 +26,7 @@ python3 metrics.py 2>&1 | tail -1 || true
 if command -v claude >/dev/null 2>&1; then
   claude -p "$(cat deploy/research_prompt.md)" \
     --model "$MODEL" --max-turns 50 --output-format json \
-    --allowedTools "Read,Edit,Write,Grep,Glob,WebSearch,WebFetch,Bash(python3:*),Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(ls:*)" \
+    --allowedTools "Read,Edit,Write,Grep,Glob,WebSearch,WebFetch,Bash(python3:*),Bash(git status:*),Bash(git diff:*),Bash(ls:*)" \
     2>/tmp/kalshi_cerr | python3 deploy/log_credits.py "$(date -u +%Y-%m)" "$MODEL" || echo "(claude iteration skipped)"
   tail -c 400 /tmp/kalshi_cerr 2>/dev/null || true
 else
@@ -34,7 +34,10 @@ else
 fi
 
 python3 metrics.py 2>&1 | tail -1 || true
-python3 boards.py 2>&1 | tail -1 || true
+# The VM owns board generation (it regenerates docs/ on every push for live freshness).
+# Discard any locally-generated docs so this loop never commits HTML that conflicts with it.
+git checkout -- docs/ 2>/dev/null || true
+git clean -fdq docs/ 2>/dev/null || true
 git add -A
 git commit -m "research(local): autonomous iteration $(date -u +%FT%TZ)" || echo "nothing to commit"
 git pull --rebase --autostash -X union origin main 2>&1 | tail -1 || true
