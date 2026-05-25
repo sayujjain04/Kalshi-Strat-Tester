@@ -54,32 +54,13 @@ User=$USER_NAME
 WantedBy=multi-user.target
 EOF
 
-# Daily "brain": analyze + guarded auto-tune + rebuild board + push (vm_cycle.sh).
-sudo tee /etc/systemd/system/lab-cycle.service >/dev/null <<EOF
-[Unit]
-Description=Kalshi lab cycle (analyze, auto-tune, board, report, push)
-[Service]
-Type=oneshot
-WorkingDirectory=$REPO_DIR
-Environment=PY=$PY
-ExecStart=/usr/bin/env bash $REPO_DIR/deploy/vm_cycle.sh
-User=$USER_NAME
-EOF
-sudo tee /etc/systemd/system/lab-cycle.timer >/dev/null <<EOF
-[Unit]
-Description=Run the Kalshi lab cycle daily
-[Timer]
-OnCalendar=*-*-* 09:00:00 UTC
-Persistent=true
-[Install]
-WantedBy=timers.target
-EOF
-
+# NOTE: the heavy "brain" (analyze + guarded auto-tune over the full corpus) runs on
+# the LOCAL Mac loop (deploy/research_local.sh), not here — the e2-micro is too small
+# for a 200+ game backtest. The daemon already refreshes the board/shards on each push,
+# so the VM's job is purely always-on live capture.
 sudo systemctl daemon-reload
 sudo systemctl enable --now paper-daemon
-sudo systemctl enable --now lab-cycle.timer
 echo "==> Done."
 echo "   Board (GitHub Pages): https://sayujjain04.github.io/Kalshi-Strat-Tester/"
 echo "   Daemon logs:  journalctl -u paper-daemon -f"
-echo "   Cycle logs:   journalctl -u lab-cycle -f   (runs daily 09:00 UTC)"
-echo "   Run cycle now: sudo systemctl start lab-cycle"
+echo "   (analysis/auto-tune + creative iteration run on the local Mac loop)"

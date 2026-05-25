@@ -12,13 +12,16 @@ Founder: skim **Open**. Each item says exactly what to do and what it unblocks.
 
 ## Open
 
-- [ ] **(2026-05-25) Anthropic API key for the headless research loop.**
-  What to do: GitHub → the `Kalshi-Strat-Tester` repo → **Settings → Secrets and
-  variables → Actions → New repository secret** → name it **`ANTHROPIC_API_KEY`**,
-  paste your key. Optionally also add `MONTHLY_BUDGET_USD` (default 25) to cap spend.
-  Unblocks: the nightly autonomous research iteration (`.github/workflows/research.yml`).
-  Until it's set, the workflow runs but skips the model step.
+- [ ] **(2026-05-25) Load the local research schedule (one-time, ~5 sec).**
+  The research loop now runs LOCALLY on your Mac using your Max-plan `claude` login
+  (no API key, no metered billing). To schedule it daily, run:
+  `cp deploy/com.kalshi.research.plist ~/Library/LaunchAgents/ && launchctl load -w ~/Library/LaunchAgents/com.kalshi.research.plist`
+  (Claude will try to do this for you; this item is here in case it needs your shell.)
+  Unblocks: nightly autonomous iteration. You can always run one now with
+  `bash deploy/research_local.sh`.
 
 ## Closed
 
-- _(none yet)_
+- **(2026-05-25) Anthropic API key** — not needed. Pivoted the research loop to run
+  locally on the Mac via the Max-plan `claude` login instead of a metered API key on
+  CI. Removed the CI workflow and deleted the Kalshi keys from GitHub Actions secrets.
