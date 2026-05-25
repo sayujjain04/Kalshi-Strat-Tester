@@ -12,16 +12,14 @@ Founder: skim **Open**. Each item says exactly what to do and what it unblocks.
 
 ## Open
 
-- [ ] **(2026-05-25) Load the local research schedule (one-time, ~5 sec).**
-  The research loop now runs LOCALLY on your Mac using your Max-plan `claude` login
-  (no API key, no metered billing). To schedule it daily, run:
-  `cp deploy/com.kalshi.research.plist ~/Library/LaunchAgents/ && launchctl load -w ~/Library/LaunchAgents/com.kalshi.research.plist`
-  (Claude will try to do this for you; this item is here in case it needs your shell.)
-  Unblocks: nightly autonomous iteration. You can always run one now with
-  `bash deploy/research_local.sh`.
+- _(none — nothing needs you right now)_
 
 ## Closed
 
+- **(2026-05-25) Load the local research schedule** — DONE. launchd agent
+  `com.kalshi.research` is loaded and verified (ran a full iteration end-to-end). It
+  runs the loop from `~/kalshi-lab` daily at 10:00 local (macOS blocks launchd from
+  `~/Documents`, so the automation lives in `~/kalshi-lab`).
 - **(2026-05-25) Anthropic API key** — not needed. Pivoted the research loop to run
   locally on the Mac via the Max-plan `claude` login instead of a metered API key on
   CI. Removed the CI workflow and deleted the Kalshi keys from GitHub Actions secrets.
