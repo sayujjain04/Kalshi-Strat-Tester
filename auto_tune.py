@@ -18,14 +18,19 @@ import strategies as strat
 
 KEY = "auto_house"
 MARGIN = 1.10        # new must beat current score by ≥10% to be adopted
-GRID = {"edge": [0.04, 0.06, 0.08], "bail_prob": [0.60, 0.65, 0.70],
-        "fav_min": [0.70, 0.75]}
+GRID = {
+    "edge":              [0.04, 0.06, 0.08],
+    "bail_prob":         [0.60, 0.65, 0.70],
+    "fav_min":           [0.70, 0.75, 0.80, 0.85],
+    "final_period_only": [False, True],
+}
 
 
 def score(a):
-    """Robust objective: per-game P&L penalized by worst-game drawdown."""
+    """Robust objective: per_game − 0.5·|worst_game|. Matches the north-star
+    penalty exactly so auto_tune optimises the same metric the board reports."""
     per = a["pnl"] / a["games"] if a["games"] else 0
-    return per - 0.1 * abs(a["worst"])
+    return per - 0.5 * abs(a["worst"])
 
 
 def _eval(combo, dataset):

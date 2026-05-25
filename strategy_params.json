@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "updated": "2026-05-24",
   "changelog": [
     {
@@ -21,6 +21,11 @@
       "version": 4,
       "date": "2026-05-25",
       "note": "auto_house auto-tuned \u2192 {'edge': 0.04, 'bail_prob': 0.65, 'fav_min': 0.7} (+6.34/game over 60 games)"
+    },
+    {
+      "version": 5,
+      "date": "2026-05-25",
+      "note": "auto_house auto-tuned \u2192 {'edge': 0.04, 'bail_prob': 0.65, 'fav_min': 0.7, 'final_period_only': True} (+2.82/game over 246 games)"
     }
   ],
   "strategies": {
@@ -30,7 +35,8 @@
       "edge": 0.04,
       "bail_prob": 0.65,
       "lock": 0.96,
-      "persist_s": 20
+      "persist_s": 20,
+      "final_period_only": true
     },
     "edge_naive": {
       "stake_frac": 0.1,

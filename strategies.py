@@ -607,6 +607,8 @@ class Conviction(Strategy):
             return
         if not self._live(ctx) or mp is None or ap is None:
             return
+        if self.p("final_period_only", False) and not ctx.final_period:
+            return
         fav_min, thr = self.p("fav_min", 0.70), self.p("edge", 0.06)
         # YES is a model favorite trading cheap → buy YES and hold
         if mp >= fav_min and (mp - ap) >= thr:
