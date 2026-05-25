@@ -88,12 +88,11 @@ def run_live(strategy_keys, auto=False, match=None):
 
 
 def _push_data(label):
+    # concurrency-safe: the lab-cycle writes the same repo, so go through the
+    # flock+autostash helper instead of raw git here.
     import subprocess
-    for cmd in (["git", "add", "data/"],
-                ["git", "commit", "-m", f"data: {label}"],
-                ["git", "push"]):
-        subprocess.run(cmd, check=False)
-    print("pushed data/ to repo")
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deploy", "git_sync.sh")
+    subprocess.run(["bash", script, f"data: {label}"], check=False)
 
 
 def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
