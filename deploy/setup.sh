@@ -45,6 +45,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$REPO_DIR
+Environment=PYTHONUNBUFFERED=1
 ExecStart=$PY $REPO_DIR/run_paper.py --daemon
 Restart=always
 RestartSec=30
