@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mean-Reversion to Model — Strategy</title><style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0b0d;--panel:#131519;--panel2:#0f1115;--line:#20242c;--tx:#e5e7eb;--mut:#7b818c;--acc:#5b9cff}
+body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--tx);max-width:1180px;margin:0 auto;padding:24px}
+a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+.muted{color:var(--mut)} .sm{font-size:12px} .pad{padding:10px 2px}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+h1{color:var(--acc);font-size:21px} h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:#cbd5e1;margin:26px 0 10px}
+.sub{color:var(--mut);font-size:12px}
+.summary{display:flex;flex-wrap:wrap;gap:8px 20px;margin:10px 0 4px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:11px}
+.summary .kv{font-size:13px} .summary b{color:#fff;font-weight:650}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:11px}
+.gcard{display:block;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px;color:var(--tx)}
+.gcard:hover{border-color:var(--acc);text-decoration:none}
+.gcard .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.gcard .teams{font-weight:650} .gcard .scr{font-size:22px;font-weight:750;letter-spacing:-.5px;margin:2px 0}
+.pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+.pill.live{color:#34d399;border-color:#34d39955} .pill.pre{color:#f5b945;border-color:#f5b94555}
+.pill.final{color:var(--mut)} .lg{font-size:10px;color:var(--mut);font-weight:700;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line);padding:7px 9px}
+td{padding:9px;border-bottom:1px solid var(--panel2);vertical-align:middle}
+tr:hover td{background:#0e1014}
+.stage{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:5px;border:1px solid}
+.stage.LIVE{color:#34d399;border-color:#34d39955}.stage.PAPER{color:#5b9cff;border-color:#5b9cff55}
+.stage.DEV{color:#f5b945;border-color:#f5b94555}.stage.PAST{color:#6b7280;border-color:#6b728055}
+.pos{color:#34d399}.neg{color:#f87171}.flat{color:#8b909a}
+.spark{vertical-align:middle}
+.nm{font-weight:600} .desc{color:#9aa0ab;font-size:12px;max-width:320px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px;margin-bottom:12px}
+.back{display:inline-block;color:var(--acc);font-size:12px;border:1px solid var(--line);padding:3px 10px;border-radius:7px;margin-bottom:14px}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.foot{color:var(--mut);font-size:11px;margin-top:24px;text-align:center}
+.tag{display:inline-block;font-size:11px;color:var(--mut);background:#0e1014;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:2px 4px 2px 0}
+</style></head><body>
+<a class="back" href="../index.html">← Board</a>
+<h1>Mean-Reversion to Model</h1>
+<div class="desc" style="max-width:760px;font-size:13px">Treats ESPN model as fair value. Enters toward the time-aligned price only on a BIG gap (≥15¢) held ≥30s — fee-aware, since a small edge loses to fees+slippage. Marginal/fragile net of costs.</div>
+<div class="bk-grid" style="margin-top:14px"><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">stage</div><div style="font-size:17px;font-weight:700;margin-top:2px"><span class="stage PAPER">PAPER</span></div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">live games</div><div style="font-size:17px;font-weight:700;margin-top:2px">2</div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">live $/game</div><div style="font-size:17px;font-weight:700;margin-top:2px"><span class="flat">+0.00</span></div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">live win%</div><div style="font-size:17px;font-weight:700;margin-top:2px">—</div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">worst game</div><div style="font-size:17px;font-weight:700;margin-top:2px"><span class="flat">+0.00</span></div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">avg trades/g</div><div style="font-size:17px;font-weight:700;margin-top:2px">0.0</div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">backtest $/g</div><div style="font-size:17px;font-weight:700;margin-top:2px"><span class="pos">+0.65</span></div></div><div class="panel" style="margin:0;padding:11px 14px"><div class="sub">backtest win%</div><div style="font-size:17px;font-weight:700;margin-top:2px">42%</div></div></div>
+<h2>Current params <span class="sub">params v4</span></h2>
+<div class="panel"><span class="tag">stake_frac = 0.1</span><span class="tag">enter_edge = 0.15</span><span class="tag">exit_edge = 0.03</span><span class="tag">persist_s = 30</span><span class="tag">hard_stop = 0.05</span><span class="tag">time_cap_s = 240</span></div>
+<h2>Equity curve <span class="sub">cumulative forward P&amp;L</span></h2>
+<div class="panel"><svg viewBox="0 0 560 140" style="width:100%;height:140px"><line x1="44" y1="122.0" x2="552" y2="122.0" stroke="#1c2027"/><text x="4" y="125" fill="#5b6068" font-size="10">+0</text><line x1="44" y1="122.0" x2="552" y2="122.0" stroke="#1c2027"/><text x="4" y="125" fill="#5b6068" font-size="10">+0</text><line x1="44" y1="122.0" x2="552" y2="122.0" stroke="#1c2027"/><text x="4" y="125" fill="#5b6068" font-size="10">+0</text><polyline points="44.0,122.0 298.0,122.0 552.0,122.0" fill="none" stroke="#34d399" stroke-width="1.8"/></svg></div>
+<h2>Games traded</h2>
+<div class="panel"><table><thead><tr><th>date</th><th>lg</th><th>game</th>
+<th>trades</th><th>P&amp;L</th><th>W/L</th></tr></thead><tbody><tr><td class="mono">20260524</td><td><span class="lg">NBA</span></td><td><a href="../games/20260524_OKC_SAS.html">OKC @ SAS</a></td><td class="mono">0</td><td class="mono flat">+0.00</td><td class="mono">0W/0L</td></tr><tr><td class="mono">20260523</td><td><span class="lg">NBA</span></td><td><a href="../games/20260523_NYK_CLE.html">NYK @ CLE</a></td><td class="mono">0</td><td class="mono flat">+0.00</td><td class="mono">0W/0L</td></tr></tbody></table></div>
+<h2>How it does by condition</h2>
+<div class="bk-grid"><div class="panel"><div class="sub" style="margin-bottom:7px">by edge at entry</div><table><thead><tr><th>bucket</th><th>trades</th><th>win%</th><th>avg P&amp;L</th></tr></thead><tbody><tr><td>6–10¢</td><td class="mono">1</td><td class="mono">0%</td><td class="mono neg">-1.18</td></tr></tbody></table></div><div class="panel"><div class="sub" style="margin-bottom:7px">by quarter</div><table><thead><tr><th>bucket</th><th>trades</th><th>win%</th><th>avg P&amp;L</th></tr></thead><tbody><tr><td>Q3</td><td class="mono">1</td><td class="mono">0%</td><td class="mono neg">-1.18</td></tr></tbody></table></div><div class="panel"><div class="sub" style="margin-bottom:7px">by side</div><table><thead><tr><th>bucket</th><th>trades</th><th>win%</th><th>avg P&amp;L</th></tr></thead><tbody><tr><td>YES</td><td class="mono">1</td><td class="mono">0%</td><td class="mono neg">-1.18</td></tr></tbody></table></div><div class="panel"><div class="sub" style="margin-bottom:7px">by league</div><table><thead><tr><th>bucket</th><th>trades</th><th>win%</th><th>avg P&amp;L</th></tr></thead><tbody><tr><td>NBA</td><td class="mono">1</td><td class="mono">0%</td><td class="mono neg">-1.18</td></tr></tbody></table></div></div>
+<h2>Params history</h2>
+<div class="panel"><ul style="line-height:1.8;font-size:12.5px;padding-left:18px"><li><b>v4</b> · 2026-05-25 — auto_house auto-tuned → {'edge': 0.04, 'bail_prob': 0.65, 'fav_min': 0.7} (+6.34/game over 60 games)</li><li><b>v3</b> · 2026-05-24 — flow_confirm: disabled the flow-flip exit (flow_exit_ticks=0) — it over-scalped a hold in 2 captured games (−$7/game). Now holds to settlement like conviction; flow stays an entry gate only.</li><li><b>v2</b> · 2026-05-23 — Added auto_house (Claude-owned, auto-tuned model) seeded from conviction's config.</li><li><b>v1</b> · 2026-05-23 — Initial — fee-aware, Kelly-sized values extracted from code. Edit via the review→approve loop (see docs/LAB.md); bump version + add a note on every change.</li></ul></div>
+<div class="foot">paper trading only</div>
+</body></html>

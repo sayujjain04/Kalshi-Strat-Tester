@@ -22,7 +22,7 @@ REPORTS = os.path.join(ROOT, "data", "results")
 
 
 def write_report():
-    live, bt = boards.strategy_stats()
+    live, bt, _ = boards.compute_stats()
     day = datetime.date.today().isoformat()
     L = [f"# Lab report — {day}", "",
          f"_params v{strat.params_version()}_", "",
@@ -39,10 +39,14 @@ def write_report():
               f"- v{last.get('version')} ({last.get('date')}): {last.get('note')}"]
     except Exception:
         pass
-    g = boards.todays_games()
-    game_lines = [f"- {x['id']}" + (f" — FINAL {x['final']}" if x.get("final") else "")
-                  for x in g] or ["- none"]
-    L += ["", "## Today's games", *game_lines]
+    game_lines = []
+    for x in boards.recent_games():
+        sc = x.get("score") or {}
+        line = f"- [{x['league']}] {x['away']}@{x['home']} — {x['status']}"
+        if sc.get("home") is not None:
+            line += f" {sc.get('away')}-{sc.get('home')}"
+        game_lines.append(line)
+    L += ["", "## Recent games", *(game_lines or ["- none"])]
     os.makedirs(REPORTS, exist_ok=True)
     path = os.path.join(REPORTS, f"report_{day}.md")
     open(path, "w").write("\n".join(L) + "\n")
@@ -64,15 +68,15 @@ def main():
     else:
         print("\n2/4 auto-tune skipped")
 
-    print("\n3/4 rebuild boards.html")
-    boards.render()
+    print("\n3/4 rebuild board + strategy pages + shards (docs/)")
+    boards.build()
 
     print("\n4/4 investor report")
     rpt = write_report()
     print(f"  wrote {rpt}")
 
     if commit:
-        for cmd in (["git", "add", "data/", "docs/INSIGHTS.md", "strategy_params.json", "boards.json"],
+        for cmd in (["git", "add", "data/", "docs/", "strategy_params.json", "boards.json"],
                     ["git", "commit", "-m", f"lab cycle {datetime.date.today().isoformat()}"],
                     ["git", "push"]):
             subprocess.run(cmd, check=False)

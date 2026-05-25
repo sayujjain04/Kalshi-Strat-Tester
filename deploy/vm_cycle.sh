@@ -6,12 +6,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 PY="${PY:-.venv/bin/python3}"
 
-"$PY" lab_cycle.py --no-commit || true     # analyze + guarded tune + report (no git here)
-
-# refresh the GitHub Pages board (served from docs/)
-mkdir -p docs/games
-[ -f boards.html ] && cp boards.html docs/index.html
-[ -d dashboards ] && cp dashboards/*.html docs/games/ 2>/dev/null || true
+"$PY" lab_cycle.py --no-commit || true     # analyze + tune + build docs/ (board+detail+shards)
 
 bash "$(dirname "$0")/git_sync.sh" "vm lab-cycle"   # concurrency-safe commit+push
 echo "lab-cycle done"

@@ -21,14 +21,32 @@ GAMES = os.path.join(ROOT, "data", "games")
 INSIGHTS = os.path.join(ROOT, "docs", "INSIGHTS.md")
 
 
-def _all_decisions():
-    """Every closed paper decision across all captured games."""
+_LEAGUES = {"NBA", "WNBA", "NCAAM", "NCAAW", "NCAA"}
+
+
+def league_of_gid(gid):
+    """game_id is <date>_<LEAGUE>_<away>_<home> (new) or <date>_<away>_<home>
+    (legacy, pre-multi-league = NBA)."""
+    parts = (gid or "").split("_")
+    if len(parts) >= 2 and parts[1] in _LEAGUES:
+        return parts[1]
+    return "NBA"
+
+
+def _all_decisions(strategy_label=None):
+    """Every closed paper decision across all captured games, each tagged with its
+    game_id. Optionally filter to one strategy (by its label)."""
     out = []
     for p in glob.glob(os.path.join(GAMES, "*", "paper_decisions.jsonl")):
+        gid = os.path.basename(os.path.dirname(p))
         for line in open(p):
             d = json.loads(line)
-            if d.get("event") == "close":
-                out.append(d)
+            if d.get("event") != "close":
+                continue
+            if strategy_label and d.get("strategy") != strategy_label:
+                continue
+            d["_game_id"] = gid
+            out.append(d)
     return out
 
 
@@ -46,13 +64,15 @@ def condition_breakdowns(decisions):
     """How outcomes vary by entry condition. Returns {dim: {bucket: stats}}."""
     dims = {"edge_at_entry": defaultdict(lambda: {"n": 0, "w": 0, "pnl": 0.0}),
             "quarter": defaultdict(lambda: {"n": 0, "w": 0, "pnl": 0.0}),
-            "side": defaultdict(lambda: {"n": 0, "w": 0, "pnl": 0.0})}
+            "side": defaultdict(lambda: {"n": 0, "w": 0, "pnl": 0.0}),
+            "league": defaultdict(lambda: {"n": 0, "w": 0, "pnl": 0.0})}
     for d in decisions:
         pnl = d.get("sim", {}).get("sim_pnl") or 0
         win = d.get("sim", {}).get("result") == "WIN"
         keys = {"edge_at_entry": _bucket((d.get("signal") or {}).get("edge")),
                 "quarter": f"Q{(d.get('game') or {}).get('period', '?')}",
-                "side": (d.get("side") or "?").upper()}
+                "side": (d.get("side") or "?").upper(),
+                "league": league_of_gid(d.get("_game_id"))}
         for dim, k in keys.items():
             a = dims[dim][k]
             a["n"] += 1; a["w"] += win; a["pnl"] += pnl

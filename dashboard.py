@@ -162,6 +162,9 @@ def build_html(vm):
     ws_dot = "ok" if m.get("connected") else "off"
     espn_dot = "ok" if g.get("connected") else "off"
     mode = vm.get("mode", "LIVE")
+    # static captured shards pass refresh=0/None → no auto-reload meta
+    refresh_meta = f'<meta http-equiv="refresh" content="{refresh}">' if refresh else ''
+    updates_txt = f'&nbsp;·&nbsp;updates {refresh}s' if refresh else '&nbsp;·&nbsp;captured replay'
 
     # run indicator
     run_html = ""
@@ -208,7 +211,7 @@ def build_html(vm):
 
     return f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="{refresh}">
+{refresh_meta}
 <title>{_esc(away)} @ {_esc(home)} — Live Tracker</title>
 <style>
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
@@ -218,6 +221,8 @@ background:var(--bg);color:var(--tx);padding:22px;max-width:1240px;margin:0 auto
 .muted{{color:var(--mut)}} .sm{{font-size:12px}} .pad{{padding:10px 2px}}
 .mono{{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}
 .top{{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}}
+.back{{color:var(--acc);text-decoration:none;font-size:12px;border:1px solid var(--line);padding:3px 9px;border-radius:7px}}
+.back:hover{{border-color:var(--acc)}}
 .match{{font-size:18px;font-weight:650;letter-spacing:.2px}}
 .yes-tag{{font-size:11px;color:var(--mut)}}
 .pill{{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;border:1px solid var(--line)}}
@@ -267,13 +272,14 @@ h2{{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut)
 </style></head><body>
 
 <div class="top">
+  {f'<a href="{vm["back_href"]}" class="back">← Board</a>' if vm.get("back_href") else ''}
   <span class="match">{_esc(away)} <span class="muted">@</span> {_esc(home)}</span>
   <span class="pill {status.lower().split('-')[0]}">{status}</span>
   <span class="pill mode">{_esc(mode)}</span>
   <span class="yes-tag">YES = {_esc(yes_team)} wins</span>
   <span class="sm muted" style="margin-left:auto">
     <span class="dot {ws_dot}"></span>Kalshi&nbsp;&nbsp;<span class="dot {espn_dot}"></span>ESPN
-    &nbsp;·&nbsp;updates {refresh}s</span>
+    {updates_txt}</span>
 </div>
 
 <div class="grid">

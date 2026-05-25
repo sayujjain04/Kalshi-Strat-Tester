@@ -120,9 +120,19 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
         except Exception as e:
             print(f"capture error {g.get('ticker')}: {e}")
 
+    def _refresh_board(quick=True):
+        try:
+            import boards
+            boards.build(quick=quick)            # board + detail + changed shards
+        except Exception as e:
+            print(f"board build error: {e}")
+
     def pusher():
         while True:
-            time.sleep(push_every_s)
+            # push ~5 min while any game is being captured, ~30 min when idle
+            any_live = any(t.is_alive() for t in active.values())
+            time.sleep(300 if any_live else push_every_s)
+            _refresh_board()
             try:
                 _push_data("daemon periodic")
             except Exception as e:
@@ -153,6 +163,7 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
             time.sleep(scan_every_s)
     except KeyboardInterrupt:
         print("daemon stopped.")
+    _refresh_board()
     _push_data("daemon final")
 
 
