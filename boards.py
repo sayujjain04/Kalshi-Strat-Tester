@@ -233,6 +233,37 @@ def research_spend(month=None):
     return t
 
 
+def lab_metrics(n=40):
+    p = os.path.join(RESEARCH, "metrics.jsonl")
+    rows = []
+    if os.path.exists(p):
+        for line in open(p):
+            line = line.strip()
+            if line:
+                try:
+                    rows.append(json.loads(line))
+                except Exception:
+                    pass
+    return rows[-n:]
+
+
+def experiments():
+    p = os.path.join(ROOT, "data", "research", "experiments.jsonl")
+    counts, items = defaultdict(int), []
+    if os.path.exists(p):
+        for line in open(p):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                e = json.loads(line)
+            except Exception:
+                continue
+            counts[e.get("status", "open")] += 1
+            items.append(e)
+    return counts, items
+
+
 # ── tiny inline SVG ───────────────────────────────────────────────────────────
 def sparkline(values, w=104, h=26):
     vals = [v for v in (values or []) if v is not None]
@@ -362,7 +393,32 @@ def render_board(state, live, bt, curve):
                     f'<div class="desc" style="max-width:640px">{r.get("detail","")}</div></td></tr>')
     rl_html = (f'<table><thead><tr><th>when</th><th>kind</th><th>what</th></tr></thead>'
                f'<tbody>{rl_rows}</tbody></table>' if rl_rows else
-               '<div class="muted pad">No autonomous iterations yet — the nightly research loop fills this in once the API key is set.</div>')
+               '<div class="muted pad">No autonomous iterations yet — the daily local research loop fills this in.</div>')
+
+    # lab progress: north-star trend + forward evidence + experiments
+    mets = lab_metrics()
+    ns_vals = [m.get("north_star") for m in mets if m.get("north_star") is not None]
+    latest = mets[-1] if mets else {}
+    ecounts, eitems = experiments()
+    open_exps = [e for e in eitems if e.get("status") == "open"]
+    exp_li = "".join(
+        f'<li><b>{e.get("id")}</b> [{e.get("mechanism","?")}] {(e.get("hypothesis","") or "")[:120]} '
+        f'<span class="sub">(n={e.get("sample_n","?")})</span></li>' for e in open_exps[:5])
+    progress = (
+        '<div class="panel"><div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end">'
+        f'<div><div class="sub">north-star · best robust strategy (per-game − ½·worst)</div>'
+        f'<div style="font-size:21px;font-weight:750">{latest.get("north_star","—")} '
+        f'{sparkline(ns_vals, w=120)}</div></div>'
+        f'<div><div class="sub">forward bets (→ ~100 to trust)</div>'
+        f'<div style="font-size:21px;font-weight:750">{latest.get("forward_bets","—")}</div></div>'
+        f'<div><div class="sub">leading strategy</div>'
+        f'<div style="font-size:16px;font-weight:650">{latest.get("best_strategy","—")}</div></div>'
+        f'<div><div class="sub">experiments</div>'
+        f'<div style="font-size:14px">{ecounts.get("open",0)} open · {ecounts.get("validated",0)} validated · {ecounts.get("killed",0)} killed</div></div>'
+        '</div>'
+        + (f'<ul style="margin:10px 0 0 16px;font-size:12px;line-height:1.6;color:#9aa0ab">{exp_li}</ul>'
+           if exp_li else '')
+        + '</div>')
 
     # live & today games
     cards = []
@@ -450,6 +506,8 @@ def render_board(state, live, bt, curve):
 <table><thead><tr><th>strategy</th><th>stage</th><th>backtest $/g · win%</th>
 <th>live $/g · win%</th><th>worst game</th><th>equity curve</th><th>wallet vs floor</th>
 </tr></thead><tbody>{table}</tbody></table>
+<h2>Lab progress <span class="sub">is the lab tending toward higher / more consistent profit?</span></h2>
+{progress}
 <h2>Research log <span class="sub">what the quant did — newest first</span></h2>
 <div class="panel">{rl_html}</div>
 <h2>Data we have to learn from</h2>
