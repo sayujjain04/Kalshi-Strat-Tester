@@ -12,6 +12,13 @@ for techniques (closing-line value, favorite-longshot bias, live in-game models,
 cross-venue arbitrage vs sportsbooks, market-making, calibration tricks) — then test them
 HERE, with our data and our rigor.
 
+## Step 0 — Maintenance pass (do this FIRST, every run)
+Before any new research, work through **`docs/MAINTENANCE.md`** and do every applicable
+upkeep task: close resolved items in `docs/OPEN_QUESTIONS.md`, enforce pre-registered
+kill-switches on adopted strategies, update the experiment ledger, and run the north-star
+regression guard. This is the system's hygiene routine — it keeps things from rotting.
+Then proceed.
+
 ## Be accountable to the trend — this is the point of each run
 Your job is to make the lab measurably better over time, not to tinker. Every run:
 1. **Read the north-star trend** in `data/research/metrics.jsonl` (latest vs prior runs)
