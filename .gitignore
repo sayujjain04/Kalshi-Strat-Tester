@@ -5,6 +5,7 @@
 # local output / caches
 dashboard.html
 dashboards/
+.venv/
 __pycache__/
 *.pyc
 

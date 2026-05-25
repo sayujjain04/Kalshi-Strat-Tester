@@ -7,10 +7,13 @@ REPO_DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 USER_NAME="$(whoami)"
 echo "Repo: $REPO_DIR   User: $USER_NAME"
 
-echo "==> Installing deps"
+echo "==> Installing deps (in a venv — robust across Ubuntu versions)"
 sudo apt-get update -y
-sudo apt-get install -y python3-pip git
-pip3 install --user requests websockets cryptography
+sudo apt-get install -y python3-pip python3-venv git
+python3 -m venv "$REPO_DIR/.venv"
+"$REPO_DIR/.venv/bin/pip" install -q --upgrade pip
+"$REPO_DIR/.venv/bin/pip" install -q requests websockets cryptography
+PY="$REPO_DIR/.venv/bin/python3"
 
 if [ ! -f "$REPO_DIR/.secrets/kalshi_key.pem" ]; then
   echo "⚠ Missing $REPO_DIR/.secrets/kalshi_key.pem"
@@ -27,7 +30,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$REPO_DIR
-ExecStart=/usr/bin/python3 $REPO_DIR/run_paper.py --daemon
+ExecStart=$PY $REPO_DIR/run_paper.py --daemon
 Restart=always
 RestartSec=30
 User=$USER_NAME
@@ -41,7 +44,7 @@ Description=Kalshi dashboard (serves dashboard.html over HTTP)
 [Service]
 Type=simple
 WorkingDirectory=$REPO_DIR
-ExecStart=/usr/bin/python3 -m http.server 8000
+ExecStart=$PY -m http.server 8000
 Restart=always
 User=$USER_NAME
 [Install]
@@ -56,7 +59,7 @@ Description=Kalshi lab cycle (analyze, auto-tune, boards, report, commit)
 [Service]
 Type=oneshot
 WorkingDirectory=$REPO_DIR
-ExecStart=/usr/bin/python3 $REPO_DIR/lab_cycle.py
+ExecStart=$PY $REPO_DIR/lab_cycle.py
 User=$USER_NAME
 EOF
 sudo tee /etc/systemd/system/lab-cycle.timer >/dev/null <<EOF
