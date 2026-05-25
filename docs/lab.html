@@ -1,0 +1,77 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="60"><title>Lab Progress</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0b0d;--panel:#131519;--panel2:#0f1115;--line:#20242c;--tx:#e5e7eb;--mut:#7b818c;--acc:#5b9cff}
+body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--tx);max-width:1180px;margin:0 auto;padding:24px}
+a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+.muted{color:var(--mut)} .sm{font-size:12px} .pad{padding:10px 2px}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+h1{color:var(--acc);font-size:21px} h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:#cbd5e1;margin:26px 0 10px}
+.sub{color:var(--mut);font-size:12px}
+.summary{display:flex;flex-wrap:wrap;gap:8px 20px;margin:10px 0 4px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:11px}
+.summary .kv{font-size:13px} .summary b{color:#fff;font-weight:650}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:11px}
+.gcard{display:block;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px;color:var(--tx)}
+.gcard:hover{border-color:var(--acc);text-decoration:none}
+.gcard .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.gcard .teams{font-weight:650} .gcard .scr{font-size:22px;font-weight:750;letter-spacing:-.5px;margin:2px 0}
+.pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+.pill.live{color:#34d399;border-color:#34d39955} .pill.pre{color:#f5b945;border-color:#f5b94555}
+.pill.final{color:var(--mut)} .lg{font-size:10px;color:var(--mut);font-weight:700;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line);padding:7px 9px}
+td{padding:9px;border-bottom:1px solid var(--panel2);vertical-align:middle}
+tr:hover td{background:#0e1014}
+.stage{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:5px;border:1px solid}
+.stage.LIVE{color:#34d399;border-color:#34d39955}.stage.PAPER{color:#5b9cff;border-color:#5b9cff55}
+.stage.DEV{color:#f5b945;border-color:#f5b94555}.stage.PAST{color:#6b7280;border-color:#6b728055}
+.pos{color:#34d399}.neg{color:#f87171}.flat{color:#8b909a}
+.spark{vertical-align:middle}
+.nm{font-weight:600} .desc{color:#9aa0ab;font-size:12px;max-width:320px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px;margin-bottom:12px}
+.back{display:inline-block;color:var(--acc);font-size:12px;border:1px solid var(--line);padding:3px 10px;border-radius:7px;margin-bottom:14px}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.foot{color:var(--mut);font-size:11px;margin-top:24px;text-align:center}
+.tag{display:inline-block;font-size:11px;color:var(--mut);background:#0e1014;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:2px 4px 2px 0}
+.progress-card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 18px;color:var(--tx)}
+.progress-card:hover{border-color:var(--acc);text-decoration:none}
+.prog-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.prog-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:15px 0 12px}
+.ptile{background:#0e1014;border:1px solid var(--line);border-radius:9px;padding:13px 15px}
+.ptile .pn{font-size:25px;font-weight:750;font-variant-numeric:tabular-nums}
+.ptile .pl{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.prog-explain{line-height:1.65;font-size:12px;color:#9aa0ab;border-top:1px solid var(--panel2);padding-top:11px}
+.prog-explain b{color:#cbd5e1;font-weight:600}
+.lab-section{margin-bottom:22px} .lab-cap{font-size:12px;color:var(--mut);margin:4px 2px 10px}
+</style></head><body>
+<a class="back" href="index.html">← Board</a>
+<h1>Lab Progress</h1>
+<div class="lab-cap">Is the lab tending toward higher / more consistent profit? The north-star
+is the one number to watch — you want the line going up.</div>
+
+<h2>North-star over time</h2>
+<div class="panel"><svg viewBox="0 0 640 210" style="width:100%;height:210px"><line x1="46" y1="194" x2="626" y2="194" stroke="#1c2027"/><text x="6" y="198" fill="#5b6068" font-size="11">+0.32</text><line x1="46" y1="106" x2="626" y2="106" stroke="#1c2027"/><text x="6" y="110" fill="#5b6068" font-size="11">+3.44</text><line x1="46" y1="18" x2="626" y2="18" stroke="#1c2027"/><text x="6" y="22" fill="#5b6068" font-size="11">+6.57</text><polyline points="46.0,18.0 118.5,18.0 191.0,194.0 263.5,194.0 336.0,194.0 408.5,194.0 481.0,185.4 553.5,185.4 626.0,185.4" fill="none" stroke="#f87171" stroke-width="2.2"/><circle cx="46.0" cy="18.0" r="3.2" fill="#f87171"/><text x="46.0" y="9" fill="#cbd5e1" font-size="11" text-anchor="middle">+6.57</text><circle cx="118.5" cy="18.0" r="3.2" fill="#f87171"/><circle cx="191.0" cy="194.0" r="3.2" fill="#f87171"/><circle cx="263.5" cy="194.0" r="3.2" fill="#f87171"/><circle cx="336.0" cy="194.0" r="3.2" fill="#f87171"/><circle cx="408.5" cy="194.0" r="3.2" fill="#f87171"/><circle cx="481.0" cy="185.4" r="3.2" fill="#f87171"/><circle cx="553.5" cy="185.4" r="3.2" fill="#f87171"/><circle cx="626.0" cy="185.4" r="3.2" fill="#f87171"/><text x="626.0" y="176" fill="#cbd5e1" font-size="11" text-anchor="middle">+0.62</text></svg>
+<div class="lab-cap" style="margin-top:10px"><b>North-star</b> = our best deployable strategy's
+<b>profit per game minus half its worst game</b>. It rewards profit and penalizes big crashes, so a
+rising line means we're finding edges that are both more profitable and safer. Backtest-based —
+treated as provisional until enough real games confirm it.</div></div>
+
+<h2>What the numbers mean</h2>
+<div class="prog-tiles">
+<div class="ptile" style="max-width:none"><div class="pl" style="font-size:12px;color:#cbd5e1;text-transform:none;letter-spacing:0">North-star</div><div class="sub" style="margin-top:4px;line-height:1.55">Best strategy's per-game profit minus ½·its worst game. Higher = more money and smaller crashes. The headline.</div></div>
+<div class="ptile" style="max-width:none"><div class="pl" style="font-size:12px;color:#cbd5e1;text-transform:none;letter-spacing:0">Backtest → live decay</div><div class="sub" style="margin-top:4px;line-height:1.55">How much worse the strategy does on real upcoming games vs the backtest. Near 0 = the edge is real; big positive = overfit to the past.</div></div>
+<div class="ptile" style="max-width:none"><div class="pl" style="font-size:12px;color:#cbd5e1;text-transform:none;letter-spacing:0">Real games tested</div><div class="sub" style="margin-top:4px;line-height:1.55">Out-of-sample games the strategy has actually traded. We don't trust any edge until ~100 — everything below that is provisional.</div></div>
+<div class="ptile" style="max-width:none"><div class="pl" style="font-size:12px;color:#cbd5e1;text-transform:none;letter-spacing:0">Leading strategy</div><div class="sub" style="margin-top:4px;line-height:1.55">Which strategy currently has the best risk-adjusted score. This can change as the loop iterates.</div></div>
+</div>
+
+<h2>Recent snapshots</h2>
+<div class="panel"><table><thead><tr><th>when</th><th>north-star</th><th>bt $/game</th>
+<th>live $/game</th><th>decay</th><th>fwd bets</th></tr></thead><tbody><tr><td class="mono sub">2026-05-25 22:14</td><td class="mono">0.625</td><td class="mono">2.82</td><td class="mono">2.345</td><td class="mono">0.475</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 22:05</td><td class="mono">0.625</td><td class="mono">2.82</td><td class="mono">2.345</td><td class="mono">0.475</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 22:04</td><td class="mono">0.625</td><td class="mono">2.82</td><td class="mono">2.345</td><td class="mono">0.475</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 21:43</td><td class="mono">0.32</td><td class="mono">4.5</td><td class="mono">2.345</td><td class="mono">2.155</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 21:20</td><td class="mono">0.32</td><td class="mono">4.5</td><td class="mono">2.345</td><td class="mono">2.155</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 21:18</td><td class="mono">0.32</td><td class="mono">4.5</td><td class="mono">2.345</td><td class="mono">2.155</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 21:17</td><td class="mono">0.32</td><td class="mono">4.5</td><td class="mono">2.345</td><td class="mono">—</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 21:16</td><td class="mono">6.57</td><td class="mono">6.57</td><td class="mono">2.935</td><td class="mono">—</td><td class="mono">18</td></tr><tr><td class="mono sub">2026-05-25 21:09</td><td class="mono">6.57</td><td class="mono">6.57</td><td class="mono">2.935</td><td class="mono">—</td><td class="mono">18</td></tr></tbody></table></div>
+
+<h2>Experiments <span class="sub">what we're testing, and the verdicts</span></h2>
+<div class="panel"><table><thead><tr><th>id</th><th>status</th><th>type</th><th>n</th>
+<th>hypothesis</th></tr></thead><tbody><tr><td><b>EXP-001</b></td><td><span class="flat">open</span></td><td>structural</td><td class="mono">18</td><td class="desc" style="max-width:520px">Holding a cheap favorite to settlement harvests Kalshi's fee curve (fee max at 50c, ~0 at extremes; settlement is free) — a structural edge.</td></tr><tr><td><b>EXP-000</b></td><td><span class="pos">validated</span></td><td>illusory</td><td class="mono">68</td><td class="desc" style="max-width:520px">edge_naive (no lag/fee handling) is a control, not a strategy — its backtest edge should collapse out-of-sample.</td></tr><tr><td><b>EXP-003</b></td><td><span class="pos">validated</span></td><td>statistical</td><td class="mono">437</td><td class="desc" style="max-width:520px">Late-game (Q4) entries are far more reliable than early-game, where win-prob is noisy.</td></tr><tr><td><b>EXP-004</b></td><td><span class="pos">validated</span></td><td>structural</td><td class="mono">246</td><td class="desc" style="max-width:520px">Restricting auto_house entries to the final period (Q4+) eliminates the miscalibrated early-game region and improves north-star robustness.</td></tr><tr><td><b>EXP-002</b></td><td><span class="neg">killed</span></td><td>statistical</td><td class="mono">437</td><td class="desc" style="max-width:520px">Small confirmed edges (~3-8c) on favorites beat large model-vs-market divergences, which are mostly stale-model error.</td></tr></tbody></table></div>
+<div class="foot">paper trading only · the daily loop updates this</div>
+</body></html>
