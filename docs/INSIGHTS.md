@@ -54,6 +54,12 @@
 |---|---|---|---|
 | YES | 47 | 30% | +0.12 |
 
+**by league:**
+
+| bucket | trades | win% | avg P&L |
+|---|---|---|---|
+| NBA | 47 | 30% | +0.12 |
+
 ## Observations (Claude reviews/extends here)
 - _Run `analyze.py` after each game; Claude reads this + proposes changes with the data behind them; user approves; apply to strategy_params.json._
 - Known to watch: `flow_confirm`'s 'flow flipped' exit can fire too often and turn a hold into a scalp (seen in captured data).
