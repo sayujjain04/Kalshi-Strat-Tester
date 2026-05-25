@@ -2,19 +2,19 @@
 
 > Data sections regenerate on each run. Use this to review with Claude, then apply approved changes to `strategy_params.json` (version bump + changelog). Params version: `3`.
 
-## Historical backtest (69 games, net of fees+slippage)
+## Historical backtest (60 games, net of fees+slippage)
 
 | strategy | $/game | win% | profitable | worst |
 |---|---|---|---|---|
-| edge_naive | +13.41 | 52% | 56/69 | -10.13 |
-| conviction | +6.57 | 49% | 48/69 | -12.12 |
-| auto_house | +5.25 | 49% | 48/69 | -9.69 |
-| late_fav | +0.89 | 100% | 15/69 | +0.00 |
-| model_revert | +0.65 | 42% | 19/69 | -8.59 |
-| wp_momentum | +0.00 | 0% | 0/69 | +0.00 |
-| spread_cap | +0.00 | 0% | 0/69 | +0.00 |
-| flow_confirm | +0.00 | 0% | 0/69 | +0.00 |
-| run_momentum | -0.40 | 28% | 10/69 | -4.03 |
+| edge_naive | +13.90 | 51% | 51/60 | -10.13 |
+| conviction | +7.02 | 49% | 45/60 | -12.12 |
+| auto_house | +5.61 | 49% | 45/60 | -9.69 |
+| late_fav | +0.98 | 100% | 14/60 | +0.00 |
+| model_revert | +0.68 | 41% | 19/60 | -8.59 |
+| wp_momentum | +0.00 | 0% | 0/60 | +0.00 |
+| spread_cap | +0.00 | 0% | 0/60 | +0.00 |
+| flow_confirm | +0.00 | 0% | 0/60 | +0.00 |
+| run_momentum | -0.40 | 29% | 10/60 | -4.03 |
 
 ## Captured live games (3) — includes real order flow
 
