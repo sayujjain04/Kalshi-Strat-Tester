@@ -1,20 +1,105 @@
 {
-  "version": 3,
+  "version": 4,
   "updated": "2026-05-24",
   "changelog": [
-    {"version": 1, "date": "2026-05-23", "note": "Initial — fee-aware, Kelly-sized values extracted from code. Edit via the review→approve loop (see docs/LAB.md); bump version + add a note on every change."},
-    {"version": 2, "date": "2026-05-23", "note": "Added auto_house (Claude-owned, auto-tuned model) seeded from conviction's config."},
-    {"version": 3, "date": "2026-05-24", "note": "flow_confirm: disabled the flow-flip exit (flow_exit_ticks=0) — it over-scalped a hold in 2 captured games (−$7/game). Now holds to settlement like conviction; flow stays an entry gate only."}
+    {
+      "version": 1,
+      "date": "2026-05-23",
+      "note": "Initial \u2014 fee-aware, Kelly-sized values extracted from code. Edit via the review\u2192approve loop (see docs/LAB.md); bump version + add a note on every change."
+    },
+    {
+      "version": 2,
+      "date": "2026-05-23",
+      "note": "Added auto_house (Claude-owned, auto-tuned model) seeded from conviction's config."
+    },
+    {
+      "version": 3,
+      "date": "2026-05-24",
+      "note": "flow_confirm: disabled the flow-flip exit (flow_exit_ticks=0) \u2014 it over-scalped a hold in 2 captured games (\u2212$7/game). Now holds to settlement like conviction; flow stays an entry gate only."
+    },
+    {
+      "version": 4,
+      "date": "2026-05-25",
+      "note": "auto_house auto-tuned \u2192 {'edge': 0.04, 'bail_prob': 0.65, 'fav_min': 0.7} (+6.34/game over 60 games)"
+    }
   ],
   "strategies": {
-    "auto_house":   {"stake_frac": 0.20, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20},
-    "edge_naive":   {"stake_frac": 0.10, "enter_edge": 0.06, "exit_edge": 0.02},
-    "model_revert": {"stake_frac": 0.10, "enter_edge": 0.15, "exit_edge": 0.03, "persist_s": 30, "hard_stop": 0.05, "time_cap_s": 240},
-    "wp_momentum":  {"stake_frac": 0.10, "vel_min": 0.08, "gap_min": 0.05, "window_s": 60, "exit_edge": 0.02, "hard_stop": 0.05, "time_cap_s": 180},
-    "run_momentum": {"stake_frac": 0.05, "ride": true, "run_threshold": 8, "run_threshold_late": 10, "revert_target": 0.04, "hard_stop": 0.05, "spike_min": 0.0, "time_cap_s": 150},
-    "late_fav":     {"stake_frac": 0.35, "fav_prob": 0.85, "price_max": 0.90, "window_lo": 60, "window_hi": 300, "drop_exit": 0.05, "exit_prob": 0.75, "tp": 0.95},
-    "spread_cap":   {"stake_frac": 0.10, "min_spread": 0.04, "max_flow": 30, "fair_tol": 0.03, "imb": 0.25, "tp": 0.03, "exit_spread": 0.02, "time_cap_s": 90},
-    "flow_confirm": {"stake_frac": 0.15, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20, "flow_exit_ticks": 0},
-    "conviction":   {"stake_frac": 0.25, "fav_min": 0.70, "edge": 0.06, "bail_prob": 0.65, "lock": 0.96, "persist_s": 20}
+    "auto_house": {
+      "stake_frac": 0.2,
+      "fav_min": 0.7,
+      "edge": 0.04,
+      "bail_prob": 0.65,
+      "lock": 0.96,
+      "persist_s": 20
+    },
+    "edge_naive": {
+      "stake_frac": 0.1,
+      "enter_edge": 0.06,
+      "exit_edge": 0.02
+    },
+    "model_revert": {
+      "stake_frac": 0.1,
+      "enter_edge": 0.15,
+      "exit_edge": 0.03,
+      "persist_s": 30,
+      "hard_stop": 0.05,
+      "time_cap_s": 240
+    },
+    "wp_momentum": {
+      "stake_frac": 0.1,
+      "vel_min": 0.08,
+      "gap_min": 0.05,
+      "window_s": 60,
+      "exit_edge": 0.02,
+      "hard_stop": 0.05,
+      "time_cap_s": 180
+    },
+    "run_momentum": {
+      "stake_frac": 0.05,
+      "ride": true,
+      "run_threshold": 8,
+      "run_threshold_late": 10,
+      "revert_target": 0.04,
+      "hard_stop": 0.05,
+      "spike_min": 0.0,
+      "time_cap_s": 150
+    },
+    "late_fav": {
+      "stake_frac": 0.35,
+      "fav_prob": 0.85,
+      "price_max": 0.9,
+      "window_lo": 60,
+      "window_hi": 300,
+      "drop_exit": 0.05,
+      "exit_prob": 0.75,
+      "tp": 0.95
+    },
+    "spread_cap": {
+      "stake_frac": 0.1,
+      "min_spread": 0.04,
+      "max_flow": 30,
+      "fair_tol": 0.03,
+      "imb": 0.25,
+      "tp": 0.03,
+      "exit_spread": 0.02,
+      "time_cap_s": 90
+    },
+    "flow_confirm": {
+      "stake_frac": 0.15,
+      "fav_min": 0.7,
+      "edge": 0.06,
+      "bail_prob": 0.65,
+      "lock": 0.96,
+      "persist_s": 20,
+      "flow_exit_ticks": 0
+    },
+    "conviction": {
+      "stake_frac": 0.25,
+      "fav_min": 0.7,
+      "edge": 0.06,
+      "bail_prob": 0.65,
+      "lock": 0.96,
+      "persist_s": 20
+    }
   }
 }
