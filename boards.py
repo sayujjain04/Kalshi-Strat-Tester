@@ -411,6 +411,8 @@ def render_board(state, live, bt, curve):
         f'{sparkline(ns_vals, w=120)}</div></div>'
         f'<div><div class="sub">forward bets (→ ~100 to trust)</div>'
         f'<div style="font-size:21px;font-weight:750">{latest.get("forward_bets","—")}</div></div>'
+        f'<div><div class="sub">bt→fwd decay (overfit if big +)</div>'
+        f'<div style="font-size:21px;font-weight:750">{latest.get("decay","—")}</div></div>'
         f'<div><div class="sub">leading strategy</div>'
         f'<div style="font-size:16px;font-weight:650">{latest.get("best_strategy","—")}</div></div>'
         f'<div><div class="sub">experiments</div>'

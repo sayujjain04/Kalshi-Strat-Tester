@@ -84,6 +84,8 @@ def main():
     # 1. historical backtest (Kalshi candles) — robustness across many games
     dataset = backtest.load_all()
     hist = backtest.run_suite(strat.make, list(strat.REGISTRY), dataset)
+    backtest.record_suite(hist, len(dataset))     # refresh ledger over the CURRENT corpus
+
     # 2. captured live games (includes order flow → live-only strategies too)
     cap, n_cap = backtest.run_captured(list(strat.REGISTRY))
     decisions = _all_decisions()

@@ -54,16 +54,21 @@ def snapshot():
 
     fwd_bets = sum(a["w"] + a["l"] for a in live.values())
     bl = live.get(best, {})
+    bt_pg = (bt.get(best) or {}).get("per_game")
+    fwd_pg = round(bl["net"] / bl["games"], 3) if bl.get("games") else None
+    # decay = how much worse forward is than backtest. Large positive = overfit alarm.
+    decay = round(bt_pg - fwd_pg, 3) if (bt_pg is not None and fwd_pg is not None) else None
     snap = {
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "north_star": best_score,                                  # robustness of best deployable (backtest)
         "best_strategy": best,
-        "bt_per_game": (bt.get(best) or {}).get("per_game"),
+        "bt_per_game": bt_pg,
         "bt_worst": (bt.get(best) or {}).get("worst"),
         "backtest_games": len(glob.glob(os.path.join(CORPUS, "*.json.gz"))),
         "captured_games": len([d for d in glob.glob(os.path.join(GAMES, "*")) if os.path.isdir(d)]),
         "forward_bets": fwd_bets,                                  # progress toward the ~100-OOS-bet bar
-        "fwd_per_game": round(bl["net"] / bl["games"], 3) if bl.get("games") else None,
+        "fwd_per_game": fwd_pg,
+        "decay": decay,                                            # bt − fwd; big + = overfit warning
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "a") as f:

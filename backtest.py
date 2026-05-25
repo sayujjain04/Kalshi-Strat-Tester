@@ -156,6 +156,23 @@ def run_captured(keys, slippage=None):
     return agg, len(gdirs)
 
 
+def record_suite(agg, n_games):
+    """Append/refresh the per-strategy backtest snapshot in the ledger (incl. worst +
+    profitable_games, so the board + north-star reflect the CURRENT corpus). Called by
+    the cycle (analyze.py) and by manual backtest runs."""
+    import tradelog
+    pv = strat.params_version()
+    for k, a in agg.items():
+        tradelog.append_result({
+            "source": "backtest", "game_id": f"backtest-{n_games}games",
+            "strategy": k, "key": k, "params_version": pv,
+            "net_pnl": round(a["pnl"], 2),
+            "per_game": round(a["pnl"] / a["games"], 2) if a["games"] else 0,
+            "trades": a["trades"], "wins": a["wins"], "losses": a["losses"],
+            "profitable_games": a.get("profitable_games", 0),
+            "worst": round(a.get("worst", 0), 2)})
+
+
 def fmt(agg, label="results"):
     print(f"\n=== {label} ===")
     print(f"{'strategy':16}{'games':>6}{'trades':>7}{'W/L':>9}{'win%':>6}"
@@ -187,14 +204,5 @@ if __name__ == "__main__":
     print(f"{len(dataset)} testable games loaded.")
     agg = run_suite(strat.make, REPLAYABLE, dataset)   # uses strategy_params.json
     fmt(agg, "BASELINE (params from strategy_params.json)")
-    # record this backtest snapshot in the performance-history ledger
-    import tradelog
-    pv = strat.params_version()
-    for k, a in agg.items():
-        tradelog.append_result({
-            "source": "backtest", "game_id": f"backtest-{len(dataset)}games",
-            "strategy": k, "key": k, "params_version": pv,
-            "net_pnl": round(a["pnl"], 2),
-            "per_game": round(a["pnl"] / a["games"], 2) if a["games"] else 0,
-            "trades": a["trades"], "wins": a["wins"], "losses": a["losses"]})
+    record_suite(agg, len(dataset))
     print("\n(logged to data/results/strategy_history.jsonl — run `python3 history.py`)")
