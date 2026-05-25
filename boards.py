@@ -186,6 +186,53 @@ def data_inventory(bt):
             "by_league": dict(by_league), "decisions": ndec}
 
 
+RESEARCH = os.path.join(ROOT, "data", "research")
+
+
+def research_log(n=14):
+    p = os.path.join(RESEARCH, "log.jsonl")
+    rows = []
+    if os.path.exists(p):
+        for line in open(p):
+            line = line.strip()
+            if line:
+                try:
+                    rows.append(json.loads(line))
+                except Exception:
+                    pass
+    return rows[-n:][::-1]
+
+
+def open_questions():
+    p = os.path.join(ROOT, "docs", "OPEN_QUESTIONS.md")
+    out, in_open = [], False
+    if os.path.exists(p):
+        for line in open(p):
+            s = line.strip()
+            if s.startswith("## Open"):
+                in_open = True; continue
+            if s.startswith("## ") and in_open:
+                break
+            if in_open and s.startswith("- [ ]"):
+                out.append(s[5:].strip().lstrip("*").strip())
+    return out
+
+
+def research_spend(month=None):
+    p = os.path.join(RESEARCH, "credits.jsonl")
+    month = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    t = 0.0
+    if os.path.exists(p):
+        for line in open(p):
+            try:
+                r = json.loads(line)
+                if r.get("month") == month:
+                    t += r.get("cost_usd", 0) or 0
+            except Exception:
+                pass
+    return t
+
+
 # ── tiny inline SVG ───────────────────────────────────────────────────────────
 def sparkline(values, w=104, h=26):
     vals = [v for v in (values or []) if v is not None]
@@ -293,8 +340,29 @@ def render_board(state, live, bt, curve):
             f'<span class="kv">backtest <b>{inv["backtest"]}</b> games</span>'
             f'<span class="kv">forward paper P&amp;L <b class="{_pcol(total_live)}">{_money(total_live)}</b></span>'
             f'<span class="kv">live-funded <b>{len(state.get("LIVE", []))}</b></span>'
+            f'<span class="kv">research spend (mo) <b>${research_spend():.2f}</b></span>'
             f'<span class="kv sub">updated {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}</span>'
             f'</div>')
+
+    oq = open_questions()
+    needs = ""
+    if oq:
+        items = "".join(f"<li>{q}</li>" for q in oq)
+        needs = (f'<div class="panel" style="border-color:#5c4a12">'
+                 f'<div style="color:#f5b945;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠ Needs you ({len(oq)})</div>'
+                 f'<ul style="line-height:1.7;font-size:13px;margin-left:16px">{items}</ul>'
+                 f'<div class="sub" style="margin-top:4px">full details in docs/OPEN_QUESTIONS.md</div></div>')
+
+    rl_rows = ""
+    for r in research_log():
+        ts = (r.get("ts", "") or "")[:16].replace("T", " ")
+        rl_rows += (f'<tr><td class="mono sub" style="white-space:nowrap">{ts}</td>'
+                    f'<td><span class="stage PAPER">{r.get("kind","note")}</span></td>'
+                    f'<td><b>{r.get("title","")}</b>'
+                    f'<div class="desc" style="max-width:640px">{r.get("detail","")}</div></td></tr>')
+    rl_html = (f'<table><thead><tr><th>when</th><th>kind</th><th>what</th></tr></thead>'
+               f'<tbody>{rl_rows}</tbody></table>' if rl_rows else
+               '<div class="muted pad">No autonomous iterations yet — the nightly research loop fills this in once the API key is set.</div>')
 
     # live & today games
     cards = []
@@ -375,12 +443,15 @@ def render_board(state, live, bt, curve):
 <style>{CSS}</style></head><body>
 <h1>🏀 Kalshi Lab</h1>
 {summ}
+{needs}
 <h2>Live &amp; Today <span class="sub">click a game → order flow</span></h2>
 <div class="cards">{cards_html}</div>
 <h2>Strategies <span class="sub">click a name → full history</span></h2>
 <table><thead><tr><th>strategy</th><th>stage</th><th>backtest $/g · win%</th>
 <th>live $/g · win%</th><th>worst game</th><th>equity curve</th><th>wallet vs floor</th>
 </tr></thead><tbody>{table}</tbody></table>
+<h2>Research log <span class="sub">what the quant did — newest first</span></h2>
+<div class="panel">{rl_html}</div>
 <h2>Data we have to learn from</h2>
 <div class="panel">{inv_html}</div>
 <div class="foot">paper trading only · the brain re-tunes the Claude-owned model daily ·

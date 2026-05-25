@@ -74,6 +74,15 @@ def game_data(game):
 
 
 def load_all(limit=None):
+    # Prefer the durable, committed corpus (historical.py). Fall back to the old
+    # ephemeral /tmp discovery only if the corpus is empty.
+    try:
+        import historical
+        corpus = historical.load_corpus(limit=limit)
+        if corpus:
+            return corpus
+    except Exception:
+        pass
     games = discover_games()
     out = []
     for g in (games[:limit] if limit else games):
