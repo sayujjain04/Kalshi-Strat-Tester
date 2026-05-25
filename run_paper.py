@@ -96,12 +96,17 @@ def _push_data(label):
     print("pushed data/ to repo")
 
 
-def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120):
-    """Always-on VM mode: capture EVERY basketball game (all leagues) CONCURRENTLY.
-    Spawns a capture thread per game (each → its own data/games/<id>/ + dashboard),
-    reaps them at game end, and periodically pushes data to the repo. Ctrl+C stops."""
+def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
+               exit_when_idle=False, today_only=False, max_runtime_s=None):
+    """Capture EVERY basketball game (all leagues) CONCURRENTLY — a thread per game,
+    each → its own data/games/<id>/ + dashboard, periodic repo push.
+    Forever by default (VM). For a Cloud Run Job set exit_when_idle/today_only/
+    max_runtime_s so it captures today's slate then TERMINATES cleanly."""
     import os, threading, time
+    from datetime import datetime, timezone
     client = KalshiClient(PROD)
+    start = time.time()
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
     dash_dir = os.path.join(os.path.dirname(OUT), "dashboards")
     os.makedirs(dash_dir, exist_ok=True)
     active = {}                       # game_id -> capture thread
@@ -127,24 +132,29 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120):
     threading.Thread(target=pusher, daemon=True).start()
     try:
         while True:
+            if max_runtime_s and time.time() - start > max_runtime_s:
+                print("max runtime reached — exiting."); break
             try:
                 games = engine.list_live_games(client)
             except Exception as e:
                 print(f"discovery error: {e}"); time.sleep(scan_every_s); continue
-            for g in games:
-                # ESPN-matched live/upcoming games stop cleanly at game end;
-                # unmatched games are skipped for now (no clean stop signal).
-                if g["status"] not in ("in", "pre") or not g["espn_id"]:
-                    continue
+            eligible = [g for g in games
+                        if g["status"] in ("in", "pre") and g["espn_id"]
+                        and (not today_only or g["date"] == today)]
+            for g in eligible:
                 gid = engine.game_id(engine.parse_ticker(g["ticker"]))
                 if gid in active and active[gid].is_alive():
                     continue
                 t = threading.Thread(target=capture, args=(g,), daemon=True)
                 t.start(); active[gid] = t
                 print(f"▶ capturing [{g['league']}] {g['away']}@{g['home']} ({gid})")
+            # bounded job: once today's slate is exhausted and nothing's running, exit
+            if exit_when_idle and not eligible and not any(t.is_alive() for t in active.values()):
+                print("slate done — exiting."); break
             time.sleep(scan_every_s)
     except KeyboardInterrupt:
         print("daemon stopped.")
+    _push_data("daemon final")
 
 
 def run_replay(strategy_keys, speed):
@@ -179,7 +189,11 @@ def main():
     ap.add_argument("--match", default=None,
                     help="run a specific game by team, e.g. --match OKC")
     ap.add_argument("--daemon", action="store_true",
-                    help="continuous: auto-track every game + push data to repo (for the VM)")
+                    help="continuous: auto-track every game + push data to repo (for a VM)")
+    ap.add_argument("--once", action="store_true",
+                    help="bounded: capture TODAY's slate then exit (for a Cloud Run Job)")
+    ap.add_argument("--max-hours", type=float, default=8.0,
+                    help="hard cap on a --once run (default 8h)")
     ap.add_argument("--strategies", default=",".join(strat.REGISTRY),
                     help="comma-separated: " + ",".join(strat.REGISTRY)
                     + f"  (live-only: {','.join(sorted(strat.LIVE_ONLY))})")
@@ -193,6 +207,9 @@ def main():
         sys.exit(1)
     if args.replay:
         run_replay(keys, args.speed)
+    elif args.once:
+        run_daemon(keys, exit_when_idle=True, today_only=True,
+                   max_runtime_s=int(args.max_hours * 3600))
     elif args.daemon:
         run_daemon(keys)
     else:

@@ -1,0 +1,5 @@
+.venv/
+dashboards/
+__pycache__/
+*.pyc
+data/games/*/_generated/
