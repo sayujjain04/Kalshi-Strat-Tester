@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Local daily research loop (uses your Max-plan claude login). Install:
+<!-- Local daily research loop (uses your Max-plan claude login). IMPORTANT: launchd
+     CANNOT execute scripts under ~/Documents (macOS TCC -> "Operation not permitted"),
+     so the automation runs from a clone in a non-protected home dir: ~/kalshi-lab.
+       git clone https://github.com/sayujjain04/Kalshi-Strat-Tester.git ~/kalshi-lab
        cp deploy/com.kalshi.research.plist ~/Library/LaunchAgents/
        launchctl load -w ~/Library/LaunchAgents/com.kalshi.research.plist
      Runs ~10:00 local daily; logs to /tmp/kalshi_research.{out,err}. If the Mac is
@@ -11,7 +14,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/sayujjain/Documents/Workspace/Prodiction Market Trends/deploy/research_local.sh</string>
+    <string>/Users/sayujjain/kalshi-lab/deploy/research_local.sh</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>

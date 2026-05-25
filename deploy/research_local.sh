@@ -25,7 +25,7 @@ python3 metrics.py 2>&1 | tail -1 || true
 # It does as many warranted actions as add value, or none — accountable to the trend.
 if command -v claude >/dev/null 2>&1; then
   claude -p "$(cat deploy/research_prompt.md)" \
-    --model "$MODEL" --max-turns 120 --output-format json \
+    --model "$MODEL" --max-turns 50 --output-format json \
     --allowedTools "Read,Edit,Write,Grep,Glob,WebSearch,WebFetch,Bash(python3:*),Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(ls:*)" \
     2>/tmp/kalshi_cerr | python3 deploy/log_credits.py "$(date -u +%Y-%m)" "$MODEL" || echo "(claude iteration skipped)"
   tail -c 400 /tmp/kalshi_cerr 2>/dev/null || true
