@@ -311,6 +311,50 @@ def equity_curve_svg(values, w=560, h=140):
             f'<polyline points="{pts}" fill="none" stroke="{col}" stroke-width="1.8"/></svg>')
 
 
+def line_chart(values, w=640, h=210):
+    """A clear, labeled line chart over runs — y-axis values, dots, end labels."""
+    vals = [v for v in (values or []) if v is not None]
+    if not vals:
+        return '<div class="muted pad">No data yet — the line builds as the daily loop runs.</div>'
+    if len(vals) == 1:
+        return (f'<div class="pad"><span style="font-size:30px;font-weight:750">{vals[0]:.3f}</span>'
+                f'<div class="sub">one reading so far — the trend line appears once the loop has run a few days</div></div>')
+    lo, hi = min(vals), max(vals)
+    if lo == hi:
+        lo, hi = lo - 1, hi + 1
+    pl, pr, pt, pb = 46, 14, 18, 16
+    rng = hi - lo
+    n = len(vals)
+    fx = lambda i: pl + i / (n - 1) * (w - pl - pr)
+    fy = lambda v: pt + (1 - (v - lo) / rng) * (h - pt - pb)
+    grid = ""
+    for frac in (0, 0.5, 1.0):
+        gv = lo + frac * rng
+        gy = fy(gv)
+        grid += (f'<line x1="{pl}" y1="{gy:.0f}" x2="{w-pr}" y2="{gy:.0f}" stroke="#1c2027"/>'
+                 f'<text x="6" y="{gy+4:.0f}" fill="#5b6068" font-size="11">{gv:+.2f}</text>')
+    pts = " ".join(f"{fx(i):.1f},{fy(v):.1f}" for i, v in enumerate(vals))
+    col = "#34d399" if vals[-1] >= vals[0] else "#f87171"
+    dots = ""
+    for i, v in enumerate(vals):
+        dots += f'<circle cx="{fx(i):.1f}" cy="{fy(v):.1f}" r="3.2" fill="{col}"/>'
+        if i in (0, n - 1) or n <= 7:
+            dots += (f'<text x="{fx(i):.1f}" y="{fy(v)-9:.0f}" fill="#cbd5e1" font-size="11" '
+                     f'text-anchor="middle">{v:+.2f}</text>')
+    return (f'<svg viewBox="0 0 {w} {h}" style="width:100%;height:{h}px">{grid}'
+            f'<polyline points="{pts}" fill="none" stroke="{col}" stroke-width="2.2"/>{dots}</svg>')
+
+
+def _delta(cur, prev):
+    if cur is None or prev is None:
+        return ""
+    d = cur - prev
+    if abs(d) < 1e-9:
+        return '<span class="flat" style="font-size:13px"> ±0</span>'
+    arrow, cls = ("▲", "pos") if d > 0 else ("▼", "neg")
+    return f'<span class="{cls}" style="font-size:14px"> {arrow}{abs(d):.2f}</span>'
+
+
 # ── shared style ──────────────────────────────────────────────────────────────
 CSS = """
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -346,6 +390,16 @@ tr:hover td{background:#0e1014}
 .bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
 .foot{color:var(--mut);font-size:11px;margin-top:24px;text-align:center}
 .tag{display:inline-block;font-size:11px;color:var(--mut);background:#0e1014;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:2px 4px 2px 0}
+.progress-card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 18px;color:var(--tx)}
+.progress-card:hover{border-color:var(--acc);text-decoration:none}
+.prog-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.prog-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:15px 0 12px}
+.ptile{background:#0e1014;border:1px solid var(--line);border-radius:9px;padding:13px 15px}
+.ptile .pn{font-size:25px;font-weight:750;font-variant-numeric:tabular-nums}
+.ptile .pl{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.prog-explain{line-height:1.65;font-size:12px;color:#9aa0ab;border-top:1px solid var(--panel2);padding-top:11px}
+.prog-explain b{color:#cbd5e1;font-weight:600}
+.lab-section{margin-bottom:22px} .lab-cap{font-size:12px;color:var(--mut);margin:4px 2px 10px}
 """
 
 
@@ -395,32 +449,38 @@ def render_board(state, live, bt, curve):
                f'<tbody>{rl_rows}</tbody></table>' if rl_rows else
                '<div class="muted pad">No autonomous iterations yet — the daily local research loop fills this in.</div>')
 
-    # lab progress: north-star trend + forward evidence + experiments
+    # lab progress: a clean, clickable card (the full chart lives on lab.html)
     mets = lab_metrics()
-    ns_vals = [m.get("north_star") for m in mets if m.get("north_star") is not None]
     latest = mets[-1] if mets else {}
-    ecounts, eitems = experiments()
-    open_exps = [e for e in eitems if e.get("status") == "open"]
-    exp_li = "".join(
-        f'<li><b>{e.get("id")}</b> [{e.get("mechanism","?")}] {(e.get("hypothesis","") or "")[:120]} '
-        f'<span class="sub">(n={e.get("sample_n","?")})</span></li>' for e in open_exps[:5])
+    prev = mets[-2] if len(mets) >= 2 else {}
+    ecounts, _ = experiments()
+    ns = latest.get("north_star")
+    ns_txt = "—" if ns is None else f"{ns:+.2f}"
     progress = (
-        '<div class="panel"><div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end">'
-        f'<div><div class="sub">north-star · best robust strategy (per-game − ½·worst)</div>'
-        f'<div style="font-size:21px;font-weight:750">{latest.get("north_star","—")} '
-        f'{sparkline(ns_vals, w=120)}</div></div>'
-        f'<div><div class="sub">forward bets (→ ~100 to trust)</div>'
-        f'<div style="font-size:21px;font-weight:750">{latest.get("forward_bets","—")}</div></div>'
-        f'<div><div class="sub">bt→fwd decay (overfit if big +)</div>'
-        f'<div style="font-size:21px;font-weight:750">{latest.get("decay","—")}</div></div>'
-        f'<div><div class="sub">leading strategy</div>'
-        f'<div style="font-size:16px;font-weight:650">{latest.get("best_strategy","—")}</div></div>'
-        f'<div><div class="sub">experiments</div>'
-        f'<div style="font-size:14px">{ecounts.get("open",0)} open · {ecounts.get("validated",0)} validated · {ecounts.get("killed",0)} killed</div></div>'
+        '<a class="progress-card" href="lab.html">'
+        '<div class="prog-head">'
+        '<div class="sub">Is the lab tending toward higher / more consistent profit?</div>'
+        '<span class="sub" style="color:var(--acc)">open the full trend →</span></div>'
+        '<div class="prog-tiles">'
+        f'<div class="ptile"><div class="pn">{ns_txt}{_delta(ns, prev.get("north_star"))}</div>'
+        '<div class="pl">north-star</div></div>'
+        f'<div class="ptile"><div class="pn">{latest.get("forward_bets","—")}'
+        ' <span class="sub" style="font-size:13px">/ 100</span></div>'
+        '<div class="pl">real games tested</div></div>'
+        f'<div class="ptile"><div class="pn">{latest.get("decay","—")}</div>'
+        '<div class="pl">backtest → live decay</div></div>'
+        f'<div class="ptile"><div class="pn" style="font-size:17px">{latest.get("best_strategy","—")}</div>'
+        '<div class="pl">leading strategy</div></div>'
         '</div>'
-        + (f'<ul style="margin:10px 0 0 16px;font-size:12px;line-height:1.6;color:#9aa0ab">{exp_li}</ul>'
-           if exp_li else '')
-        + '</div>')
+        '<div class="prog-explain">'
+        "<b>North-star</b> — our best strategy's profit per game minus half its worst game; "
+        "higher = more money and smaller crashes. &nbsp;&nbsp;"
+        "<b>Decay</b> — how much worse it does on real upcoming games than in backtest; "
+        "near 0 = the edge is real, big = overfit. &nbsp;&nbsp;"
+        "<b>Real games tested</b> — we don't trust any edge until ~100. &nbsp;&nbsp;"
+        f'{ecounts.get("validated",0)} experiments validated · {ecounts.get("killed",0)} killed · '
+        f'{ecounts.get("open",0)} open.</div>'
+        '</a>')
 
     # live & today games
     cards = []
@@ -618,11 +678,80 @@ def render_strategy_detail(key, state, live, bt, curve):
     open(os.path.join(STRATDIR, f"{key}.html"), "w").write(html)
 
 
+# ── lab progress detail (docs/lab.html) ──────────────────────────────────────
+def render_progress():
+    mets = lab_metrics(60)
+    ns_vals = [m.get("north_star") for m in mets if m.get("north_star") is not None]
+    latest = mets[-1] if mets else {}
+    _, eitems = experiments()
+
+    hist = ""
+    for m in mets[-15:][::-1]:
+        hist += (f'<tr><td class="mono sub">{(m.get("ts","") or "")[:16].replace("T"," ")}</td>'
+                 f'<td class="mono">{m.get("north_star","—")}</td>'
+                 f'<td class="mono">{m.get("bt_per_game","—")}</td>'
+                 f'<td class="mono">{m.get("fwd_per_game","—")}</td>'
+                 f'<td class="mono">{m.get("decay","—")}</td>'
+                 f'<td class="mono">{m.get("forward_bets","—")}</td></tr>')
+    hist = hist or '<tr><td colspan="6" class="muted pad">no snapshots yet</td></tr>'
+
+    order = {"open": 0, "validated": 1, "killed": 2}
+    exp = ""
+    for e in sorted(eitems, key=lambda x: order.get(x.get("status"), 3)):
+        sc = {"validated": "pos", "killed": "neg", "open": "flat"}.get(e.get("status"), "flat")
+        exp += (f'<tr><td><b>{e.get("id")}</b></td><td><span class="{sc}">{e.get("status","?")}</span></td>'
+                f'<td>{e.get("mechanism","?")}</td><td class="mono">{e.get("sample_n","?")}</td>'
+                f'<td class="desc" style="max-width:520px">{e.get("hypothesis","")}</td></tr>')
+    exp = exp or '<tr><td colspan="5" class="muted pad">none yet</td></tr>'
+
+    def card(term, body):
+        return (f'<div class="ptile" style="max-width:none"><div class="pl" style="font-size:12px;'
+                f'color:#cbd5e1;text-transform:none;letter-spacing:0">{term}</div>'
+                f'<div class="sub" style="margin-top:4px;line-height:1.55">{body}</div></div>')
+
+    html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="60"><title>Lab Progress</title>
+<style>{CSS}</style></head><body>
+<a class="back" href="index.html">← Board</a>
+<h1>Lab Progress</h1>
+<div class="lab-cap">Is the lab tending toward higher / more consistent profit? The north-star
+is the one number to watch — you want the line going up.</div>
+
+<h2>North-star over time</h2>
+<div class="panel">{line_chart(ns_vals)}
+<div class="lab-cap" style="margin-top:10px"><b>North-star</b> = our best deployable strategy's
+<b>profit per game minus half its worst game</b>. It rewards profit and penalizes big crashes, so a
+rising line means we're finding edges that are both more profitable and safer. Backtest-based —
+treated as provisional until enough real games confirm it.</div></div>
+
+<h2>What the numbers mean</h2>
+<div class="prog-tiles">
+{card("North-star", "Best strategy's per-game profit minus ½·its worst game. Higher = more money and smaller crashes. The headline.")}
+{card("Backtest → live decay", "How much worse the strategy does on real upcoming games vs the backtest. Near 0 = the edge is real; big positive = overfit to the past.")}
+{card("Real games tested", "Out-of-sample games the strategy has actually traded. We don't trust any edge until ~100 — everything below that is provisional.")}
+{card("Leading strategy", "Which strategy currently has the best risk-adjusted score. This can change as the loop iterates.")}
+</div>
+
+<h2>Recent snapshots</h2>
+<div class="panel"><table><thead><tr><th>when</th><th>north-star</th><th>bt $/game</th>
+<th>live $/game</th><th>decay</th><th>fwd bets</th></tr></thead><tbody>{hist}</tbody></table></div>
+
+<h2>Experiments <span class="sub">what we're testing, and the verdicts</span></h2>
+<div class="panel"><table><thead><tr><th>id</th><th>status</th><th>type</th><th>n</th>
+<th>hypothesis</th></tr></thead><tbody>{exp}</tbody></table></div>
+<div class="foot">paper trading only · the daily loop updates this</div>
+</body></html>"""
+    os.makedirs(DOCS, exist_ok=True)
+    open(os.path.join(DOCS, "lab.html"), "w").write(html)
+
+
 # ── orchestration ─────────────────────────────────────────────────────────────
 def build(quick=False):
     state = load_state()
     live, bt, curve = compute_stats()
     render_board(state, live, bt, curve)
+    render_progress()
     for key in strat.REGISTRY:
         render_strategy_detail(key, state, live, bt, curve)
     rendered = shards.render_all(changed_only=quick)
