@@ -364,6 +364,14 @@ class LiveEngine:
             while not self._stop:
                 market = self.market_state.snapshot()
                 game = self.game_state.snapshot()
+                # Kalshi settlement is the AUTHORITATIVE game-over — ESPN can hang on
+                # "in" forever (stuck/mismatched event), which would capture endlessly.
+                # Check the market ~every 60s and force "post" once it's settled.
+                self._tick_i = getattr(self, "_tick_i", 0) + 1
+                if game.get("status") != "post" and self._tick_i % 30 == 0:
+                    if kalshi_result(self.client, self.ticker):
+                        self.log("Kalshi market settled — ending capture.")
+                        game["status"] = "post"
                 # dead-data guard: game-derived signals only re-fire when ESPN
                 # actually advanced (its timestamp / score / clock changed)
                 sig = (game.get("win_prob_ts"), game["score"]["home"],

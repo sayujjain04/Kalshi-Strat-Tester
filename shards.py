@@ -96,7 +96,10 @@ def render_shard(game_dir, out_path):
         game["score"] = meta_file["final_score"]
     # reflect the REAL state: final_status if the game ended (meta saved), else the
     # last captured tick's status (pre/in) so live games show LIVE with the live score.
-    game["status"] = meta_file.get("final_status") or (last.get("game") or {}).get("status") or "post"
+    settled = meta_file.get("kalshi_result") in ("yes", "no")
+    game["status"] = (meta_file.get("final_status")
+                      or ("post" if settled else None)
+                      or (last.get("game") or {}).get("status") or "post")
     game["connected"] = False
     live = game["status"] in ("in", "pre")
 
