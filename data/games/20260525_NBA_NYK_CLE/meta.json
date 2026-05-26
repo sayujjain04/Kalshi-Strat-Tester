@@ -1,9 +1,1 @@
-{
- "game_id": "20260525_NBA_NYK_CLE",
- "ticker": "KXNBAGAME-26MAY25NYKCLE-NYK",
- "mode": "paper",
- "away": "NYK",
- "home": "CLE",
- "date": "20260525",
- "yes_team": "NYK"
-}
+{"game_id": "20260525_NBA_NYK_CLE", "ticker": "KXNBAGAME-26MAY25NYKCLE-NYK", "mode": "paper", "away": "NYK", "home": "CLE", "date": "20260525", "yes_team": "NYK", "final_status": "post", "kalshi_result": "yes", "final_score": {"home": 93, "away": 130}}
