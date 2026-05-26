@@ -548,3 +548,11 @@
 {"price": 0.45, "count": 5.0, "taker_side": "yes", "ts_ms": 1779769020079}
 {"price": 0.45, "count": 20.0, "taker_side": "yes", "ts_ms": 1779769030825}
 {"price": 0.45, "count": 11.0, "taker_side": "yes", "ts_ms": 1779769095717}
+{"price": 0.45, "count": 10.0, "taker_side": "yes", "ts_ms": 1779769376599}
+{"price": 0.45, "count": 104.0, "taker_side": "yes", "ts_ms": 1779769376934}
+{"price": 0.45, "count": 40.0, "taker_side": "yes", "ts_ms": 1779769404442}
+{"price": 0.46, "count": 3.0, "taker_side": "yes", "ts_ms": 1779769404442}
+{"price": 0.44, "count": 23.05, "taker_side": "no", "ts_ms": 1779769433725}
+{"price": 0.44, "count": 23.0, "taker_side": "no", "ts_ms": 1779769433725}
+{"price": 0.44, "count": 4.03, "taker_side": "no", "ts_ms": 1779769433725}
+{"price": 0.44, "count": 53.92, "taker_side": "no", "ts_ms": 1779769433725}
