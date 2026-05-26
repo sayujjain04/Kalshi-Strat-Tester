@@ -5,5 +5,59 @@
  "away": "CONN",
  "home": "GS",
  "date": "20260525",
- "yes_team": "CONN"
+ "yes_team": "CONN",
+ "kalshi_result": null,
+ "final_score": {
+  "home": 97,
+  "away": 70
+ },
+ "final_status": "post",
+ "strategies": [
+  {
+   "strategy": "Edge (naive control)",
+   "equity": 94.94,
+   "trades": 1
+  },
+  {
+   "strategy": "Mean-Reversion to Model",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Win-Prob Momentum",
+   "equity": 96.19,
+   "trades": 1
+  },
+  {
+   "strategy": "Run Momentum",
+   "equity": 99.87,
+   "trades": 1
+  },
+  {
+   "strategy": "Late-Game Favorite Lock",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Spread Capture",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Conviction + Flow Gate",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Conviction Hold",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Auto House (Claude-owned)",
+   "equity": 100.0,
+   "trades": 0
+  }
+ ],
+ "saved_at": "2026-05-26T04:13:23.913061+00:00"
 }
