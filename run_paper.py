@@ -163,6 +163,15 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
                 gid = engine.game_id(engine.parse_ticker(g["ticker"]))
                 if gid in active and active[gid].is_alive():
                     continue
+                # don't re-capture a game we've already finalized — ESPN can stay "in"
+                # after the Kalshi market settled, which would restart endless capture
+                import tradelog, json as _j
+                mp = os.path.join(tradelog.game_dir(gid), "meta.json")
+                try:
+                    if os.path.exists(mp) and _j.load(open(mp)).get("final_status"):
+                        continue
+                except Exception:
+                    pass
                 t = threading.Thread(target=capture, args=(g,), daemon=True)
                 t.start(); active[gid] = t
                 print(f"▶ capturing [{g['league']}] {g['away']}@{g['home']} ({gid})")
