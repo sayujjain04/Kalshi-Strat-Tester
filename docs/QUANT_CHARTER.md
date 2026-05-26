@@ -28,6 +28,10 @@ strategy and the strongest evidence *against* it — then the supporting case.
    probably **our error**, not free money — cap trusted edge; treat outliers as
    model-failure alarms. (A sportsbook de-vig feed may be added later as a 2nd anchor.)
 4. **Disconfirmation first.** See reporting standard below.
+5. **Learn before inventing.** Default to replicating *proven* techniques from the
+   literature / X / GitHub / sharp practitioners and testing them with our rigor — not
+   inventing novel strategies from scratch. Search first, cite the source in the
+   experiment ledger, then test. Invention is the exception, for when the field is silent.
 
 ## Mandatory diagnostics — run BEFORE trusting any edge
 - **Calibration (keystone).** Bucket bets by predicted prob; does realized win-rate
