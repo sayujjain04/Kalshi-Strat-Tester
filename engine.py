@@ -295,6 +295,13 @@ class LiveEngine:
         self._declog = tradelog.DecisionLogger(self._gdir, "paper")
         self._tickrec = tradelog.MarketRecorder(self._gdir, heartbeat_s=30)
         self._tapelog = tradelog.TradeTapeLogger(self._gdir)
+        # persist the Kalshi ticker + teams at capture START (no final_* yet) so live
+        # shards can render before the game ends. _save_meta overwrites with finals.
+        tradelog.save_meta(self._gdir, {
+            "game_id": game_id(self.meta), "ticker": self.ticker, "mode": "paper",
+            "away": self.meta["away"], "home": self.meta["home"],
+            "date": self.meta["date"], "yes_team": self.meta["yes_team"],
+        })
 
     def _on_plays(self, gs, new):
         import tradelog

@@ -123,10 +123,17 @@ def render_shard(game_dir, out_path):
 def _needs_render(game_dir, out_path):
     if not os.path.exists(out_path):
         return True
-    # In-progress games (no meta.json yet) change every tick — always re-render them.
-    # (Don't trust mtimes here: the VM's git ops keep touching the shard file, which
-    # made the staleness check think live shards were already fresh.)
-    if not os.path.exists(os.path.join(game_dir, "meta.json")):
+    # In-progress games change every tick — always re-render them. "In progress" =
+    # meta.json missing OR present without a final_score (the ticker is written at
+    # capture start, finals only at game end). Don't trust mtimes for live games: the
+    # VM's git ops keep touching the shard file, which fooled the staleness check.
+    mp = os.path.join(game_dir, "meta.json")
+    if not os.path.exists(mp):
+        return True
+    try:
+        if not json.load(open(mp)).get("final_score"):
+            return True
+    except Exception:
         return True
     om = os.path.getmtime(out_path)
     for f in ("ticks.jsonl", "paper_decisions.jsonl", "meta.json"):
