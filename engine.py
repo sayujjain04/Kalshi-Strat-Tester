@@ -56,6 +56,27 @@ def parse_ticker(ticker):
     return None
 
 
+def kalshi_result(client, ticker):
+    """Kalshi's OFFICIAL settlement for a market: 'yes' | 'no' | None (not yet settled)."""
+    try:
+        m, _ = client.market(ticker)
+        r = (m or {}).get("result")
+        return r if r in ("yes", "no") else None
+    except Exception:
+        return None
+
+
+def _settle_yes(kalshi_result, score, yes_is_home):
+    """Did the YES side win? Prefer Kalshi's official result; fall back to ESPN score."""
+    if kalshi_result in ("yes", "no"):
+        return kalshi_result == "yes"
+    score = score or {}
+    if score.get("home") is None or score.get("home") == score.get("away"):
+        return None
+    home_won = score["home"] > score["away"]
+    return home_won if yes_is_home else not home_won
+
+
 def _iso_to_unix(s):
     try:
         return datetime.fromisoformat(str(s).replace("Z", "+00:00")).timestamp()
@@ -397,12 +418,12 @@ class LiveEngine:
             self._save_meta()
 
     def _settle_open(self, game, market):
-        """Close any open paper position at the final $1/$0 outcome."""
-        sc = game.get("score") or {}
-        if sc.get("home") is None or sc.get("home") == sc.get("away"):
+        """Close any open paper position at the final $1/$0 outcome — Kalshi's official
+        result if it's posted, else inferred from the ESPN final score."""
+        self._kalshi_result = kalshi_result(self.client, self.ticker)
+        yes_won = _settle_yes(self._kalshi_result, game.get("score"), self.meta["yes_is_home"])
+        if yes_won is None:
             return
-        home_won = sc["home"] > sc["away"]
-        yes_won = home_won if self.meta["yes_is_home"] else not home_won
         for s in self.strategies:
             if not s.account.flat:
                 s.account.close(market, clock="FINAL",
@@ -416,6 +437,7 @@ class LiveEngine:
             "game_id": game_id(self.meta), "ticker": self.ticker, "mode": "paper",
             "away": self.meta["away"], "home": self.meta["home"], "date": self.meta["date"],
             "yes_team": self.meta["yes_team"],
+            "kalshi_result": getattr(self, "_kalshi_result", None) or kalshi_result(self.client, self.ticker),
             "final_score": g.get("score"), "final_status": g.get("status"),
             "strategies": [{"strategy": s.label, "equity": round(s.account.equity(m), 2),
                             "trades": len(s.account.closed)} for s in self.strategies],
@@ -509,10 +531,7 @@ def simulate_captured(game_dir, strategies, slippage=None):
 
     # settle open positions on the final outcome
     fs = meta_file.get("final_score") or (ticks[-1].get("game") or {}).get("score") or {}
-    yes_won = None
-    if fs.get("home") is not None and fs.get("home") != fs.get("away"):
-        home_won = fs["home"] > fs["away"]
-        yes_won = home_won if meta["yes_is_home"] else not home_won
+    yes_won = _settle_yes(meta_file.get("kalshi_result"), fs, meta["yes_is_home"])
     for s in strategies:
         if not s.account.flat:
             s.account.close(last_market, clock="FINAL",
@@ -576,10 +595,7 @@ def simulate(meta, data, strategies, frame_cb=None, log=lambda *a: None, slippag
                      model_series, play_log, portfolio)
 
     final = feed.state.snapshot()
-    yes_won = None
-    if final["score"]["home"] != final["score"]["away"]:
-        home_won = final["score"]["home"] > final["score"]["away"]
-        yes_won = home_won if meta["yes_is_home"] else not home_won
+    yes_won = _settle_yes(data.get("kalshi_result"), final["score"], meta["yes_is_home"])
     last_market = market_from_candle(candles_all[-1] if candles_all else None)
     for s in strategies:
         if not s.account.flat:

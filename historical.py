@@ -34,20 +34,21 @@ ESPN = "http://site.api.espn.com/apis/site/v2/sports"
 
 def _settled_index(client, series):
     """{(date, frozenset({espn away, espn home})): ticker} for settled+finalized markets."""
-    idx = {}
+    idx, results = {}, {}
     for status in ("settled", "finalized"):
         for m in client.markets(series_ticker=series, status=status, limit=200):
             p = engine.parse_ticker(m.get("ticker", ""))
             if p:
                 key = (p["date"], frozenset({espn_abbr(p["away"]), espn_abbr(p["home"])}))
                 idx[key] = m["ticker"]
-    return idx
+                results[m["ticker"]] = m.get("result") if m.get("result") in ("yes", "no") else None
+    return idx, results
 
 
 def discover(series, sess, client):
     """Match Kalshi settled game markets to ESPN finished events (per-day scoreboard
     over the markets' date span). Returns [{espn_id,date,away,home,ticker,league}]."""
-    idx = _settled_index(client, series)
+    idx, results = _settled_index(client, series)
     if not idx:
         return []
     sport = sport_for(series)
@@ -70,8 +71,9 @@ def discover(series, sess, client):
             away, home = cs["away"]["team"]["abbreviation"], cs["home"]["team"]["abbreviation"]
             key = (ds, frozenset({away, home}))
             if key in idx:
-                out.append({"espn_id": ev["id"], "date": ds, "away": away,
-                            "home": home, "ticker": idx[key], "league": LEAGUES[series][0]})
+                out.append({"espn_id": ev["id"], "date": ds, "away": away, "home": home,
+                            "ticker": idx[key], "league": LEAGUES[series][0],
+                            "kalshi_result": results.get(idx[key])})
         d += timedelta(days=1)
         time.sleep(0.12)
     return out
@@ -91,6 +93,7 @@ def fetch_and_store(g, client):
         return f"err:{type(e).__name__}"
     if not data or len(data.get("candles") or []) <= 5:
         return "nocandles"
+    data["kalshi_result"] = g.get("kalshi_result")   # official settlement for simulate()
     os.makedirs(CORPUS, exist_ok=True)
     with gzip.open(out, "wt", encoding="utf-8") as f:
         json.dump({"g": g, "data": data}, f)
