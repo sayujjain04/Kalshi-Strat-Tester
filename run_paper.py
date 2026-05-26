@@ -131,16 +131,21 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
             print(f"board build error: {e}", flush=True)
 
     def pusher():
+        # Wake frequently and push when due. push when due, not "sleep then push", so a
+        # restart never leaves a long initial gap (last_push=0 → first live check pushes).
+        # ~2 min cadence while any game is live, ~30 min (push_every_s) when idle.
+        last_push = 0.0
         while True:
-            # push ~2 min while any game is being captured (fresher live shards/board),
-            # ~30 min when idle
+            time.sleep(60)
             any_live = any(t.is_alive() for t in active.values())
-            time.sleep(120 if any_live else push_every_s)
-            _refresh_board()
-            try:
-                _push_data("daemon periodic")
-            except Exception as e:
-                print(f"push error: {e}")
+            due = time.time() - last_push
+            if (any_live and due >= 120) or due >= push_every_s:
+                _refresh_board()
+                try:
+                    _push_data("daemon periodic")
+                except Exception as e:
+                    print(f"push error: {e}")
+                last_push = time.time()
 
     threading.Thread(target=pusher, daemon=True).start()
     try:
