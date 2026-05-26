@@ -496,7 +496,17 @@ def simulate_captured(game_dir, strategies, slippage=None):
     meta = parse_ticker(meta_file.get("ticker", os.path.basename(game_dir)))
     if not meta:
         return None
-    ticks = [_j.loads(l) for l in open(ticks_path)]
+    # tolerate a partial/half-written last line (the capture thread may be appending
+    # concurrently while we render a LIVE game's shard) — skip bad lines, don't throw.
+    ticks = []
+    for _l in open(ticks_path):
+        _l = _l.strip()
+        if not _l:
+            continue
+        try:
+            ticks.append(_j.loads(_l))
+        except Exception:
+            pass
     if not ticks:
         return None
 

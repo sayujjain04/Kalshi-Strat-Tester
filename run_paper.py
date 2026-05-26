@@ -129,9 +129,10 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
 
     def pusher():
         while True:
-            # push ~5 min while any game is being captured, ~30 min when idle
+            # push ~2 min while any game is being captured (fresher live shards/board),
+            # ~30 min when idle
             any_live = any(t.is_alive() for t in active.values())
-            time.sleep(300 if any_live else push_every_s)
+            time.sleep(120 if any_live else push_every_s)
             _refresh_board()
             try:
                 _push_data("daemon periodic")
