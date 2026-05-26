@@ -139,7 +139,7 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
             time.sleep(60)
             any_live = any(t.is_alive() for t in active.values())
             due = time.time() - last_push
-            if (any_live and due >= 120) or due >= push_every_s:
+            if (any_live and due >= 300) or due >= push_every_s:
                 _refresh_board()
                 try:
                     _push_data("daemon periodic")
