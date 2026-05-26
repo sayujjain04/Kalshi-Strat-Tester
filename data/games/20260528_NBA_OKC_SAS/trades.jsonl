@@ -721,3 +721,7 @@
 {"price": 0.46, "count": 1.0, "taker_side": "yes", "ts_ms": 1779786462675}
 {"price": 0.46, "count": 20.81, "taker_side": "yes", "ts_ms": 1779786600359}
 {"price": 0.45, "count": 1.0, "taker_side": "yes", "ts_ms": 1779786885962}
+{"price": 0.45, "count": 0.43, "taker_side": "yes", "ts_ms": 1779786907364}
+{"price": 0.45, "count": 25.78, "taker_side": "yes", "ts_ms": 1779786907364}
+{"price": 0.46, "count": 40.0, "taker_side": "yes", "ts_ms": 1779786999493}
+{"price": 0.46, "count": 16.0, "taker_side": "yes", "ts_ms": 1779787197966}
