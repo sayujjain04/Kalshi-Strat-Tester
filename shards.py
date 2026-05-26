@@ -91,8 +91,11 @@ def render_shard(game_dir, out_path):
     game.setdefault("score", {"home": 0, "away": 0})
     if meta_file.get("final_score"):
         game["score"] = meta_file["final_score"]
-    game["status"] = meta_file.get("final_status", "post")
+    # reflect the REAL state: final_status if the game ended (meta saved), else the
+    # last captured tick's status (pre/in) so live games show LIVE with the live score.
+    game["status"] = meta_file.get("final_status") or (last.get("game") or {}).get("status") or "post"
     game["connected"] = False
+    live = game["status"] in ("in", "pre")
 
     plays = [{"period": p.get("period"), "clock": p.get("clock"), "text": p.get("text")}
              for p in _read_jsonl(os.path.join(game_dir, "plays.jsonl"))]
@@ -104,8 +107,10 @@ def render_shard(game_dir, out_path):
         if wph is not None:
             model_series.append(wph if meta["yes_is_home"] else 1 - wph)
 
+    # live shards auto-refresh in the browser (~30s) and are labeled LIVE; finished
+    # games are static "captured replay" pages.
     vm = engine.build_vm(meta, market, game, candles, model_series, plays, pf,
-                         "CAPTURED", 0)
+                         "LIVE" if live else "CAPTURED", 30 if live else 0)
     vm["back_href"] = "../index.html"
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     dashboard.write(out_path, vm)
@@ -114,6 +119,11 @@ def render_shard(game_dir, out_path):
 
 def _needs_render(game_dir, out_path):
     if not os.path.exists(out_path):
+        return True
+    # In-progress games (no meta.json yet) change every tick — always re-render them.
+    # (Don't trust mtimes here: the VM's git ops keep touching the shard file, which
+    # made the staleness check think live shards were already fresh.)
+    if not os.path.exists(os.path.join(game_dir, "meta.json")):
         return True
     om = os.path.getmtime(out_path)
     for f in ("ticks.jsonl", "paper_decisions.jsonl", "meta.json"):
