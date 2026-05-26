@@ -32,6 +32,11 @@ Keep it cheap: most items are quick reads/edits. Only act when something's actua
    ~100. If `historical.py` found 0 new games for many days during a season, or metrics
    stopped logging, flag it in `OPEN_QUESTIONS.md`.
 
+6. **Finalize stuck games.** Run `python3 deploy/finalize_game.py --all` — closes out any
+   game whose Kalshi market settled but whose capture didn't finalize (ESPN can stay "in"
+   after settlement), which otherwise shows LIVE forever and wastes capture. (Now also in
+   the daily loop.)
+
 ## Occasional (when relevant)
 6. **Doc/board hygiene.** Remove or update stale docs; confirm board drill-in links
    resolve; delete orphaned scripts. Don't accumulate cruft.

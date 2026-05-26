@@ -15,6 +15,10 @@ mkdir -p data/research
 echo "=== research(local) $(date -u +%FT%TZ) ==="
 git pull --rebase --autostash -X union origin main 2>&1 | tail -2 || true
 
+# close out any game whose Kalshi market settled but whose capture didn't finalize
+# (would otherwise show LIVE forever / keep being re-captured)
+python3 deploy/finalize_game.py --all 2>&1 | tail -3 || true
+
 # free local compute (no model spend): corpus refresh + analyze + guarded auto-tune +
 # board + report, then snapshot the north-star metric for the trend.
 python3 historical.py --leagues KXNBAGAME 2>&1 | tail -2 || true
