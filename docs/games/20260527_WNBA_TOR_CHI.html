@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="30">
+<title>TOR @ CHI — Live Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0b0d;--panel:#131519;--panel2:#0f1115;--line:#20242c;--tx:#e5e7eb;--mut:#7b818c;--acc:#5b9cff}
+body{font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;
+background:var(--bg);color:var(--tx);padding:22px;max-width:1240px;margin:0 auto}
+.muted{color:var(--mut)} .sm{font-size:12px} .pad{padding:10px 2px}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.back{color:var(--acc);text-decoration:none;font-size:12px;border:1px solid var(--line);padding:3px 9px;border-radius:7px}
+.back:hover{border-color:var(--acc)}
+.match{font-size:18px;font-weight:650;letter-spacing:.2px}
+.yes-tag{font-size:11px;color:var(--mut)}
+.pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;border:1px solid var(--line)}
+.pill.live{color:#34d399;border-color:#34d39933} .pill.pre{color:#f5b945;border-color:#f5b94533}
+.pill.final{color:var(--mut)} .pill.mode{color:var(--acc);border-color:#5b9cff33}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.dot.ok{background:#34d399} .dot.off{background:#f87171}
+.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px}
+.lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin-bottom:9px}
+.score{display:flex;align-items:center;justify-content:space-between}
+.score .t{text-align:center;flex:1} .score .n{font-size:12px;color:var(--mut)}
+.score .p{font-size:34px;font-weight:750;letter-spacing:-1px}
+.score .mid{font-size:12px;color:var(--mut);text-align:center;min-width:64px}
+.pb-row{display:flex;align-items:center;gap:9px;margin:7px 0}
+.pb-lab{width:46px;font-size:11px;color:var(--mut)}
+.pb-track{flex:1;height:8px;background:#1b1f27;border-radius:5px;overflow:hidden}
+.pb-fill{height:100%;border-radius:5px}
+.pb-val{width:38px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.edge{margin-top:11px;font-size:13px;font-weight:650}
+.big{font-size:30px;font-weight:750;letter-spacing:-1px}
+.cols{display:grid;grid-template-columns:1.55fr 1fr;gap:12px;margin-bottom:12px}
+.run{background:#211a06;border:1px solid #5c4a12;color:#f5b945;border-radius:9px;
+padding:9px 13px;font-weight:650;font-size:13px;margin-bottom:12px}
+.flow{display:flex;gap:18px;align-items:center;margin-bottom:11px}
+.imb-track{flex:1;height:9px;background:#1b1f27;border-radius:5px;position:relative;overflow:hidden}
+.imb-fill{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#f87171,#5b9cff)}
+.imb-mark{position:absolute;top:-3px;width:2px;height:15px;background:#fff}
+.tape-row,.play{display:flex;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--panel2)}
+.tape-row span:first-child{width:34px;font-weight:600}
+.play{display:block;border-bottom:1px solid var(--panel2);padding:5px 0}
+.scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:12px}
+.scard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px}
+.scard-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.scard-name{font-weight:650} .scard-eq{font-weight:700;font-variant-numeric:tabular-nums}
+.scard-eq small{font-weight:500;opacity:.8}
+.scard-sub{font-size:11px;color:var(--mut);margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);
+padding:7px 9px;border-bottom:1px solid var(--line)}
+td{padding:8px 9px;border-bottom:1px solid var(--panel2);vertical-align:top}
+.side{font-weight:700;font-size:11px} .side-yes{color:#34d399} .side-no{color:#f87171}
+.badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid}
+.reason{color:#c3c8d2;max-width:380px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin:6px 2px 9px}
+.foot{color:var(--mut);font-size:11px;margin-top:16px;text-align:center}
+</style></head><body>
+
+<div class="top">
+  <a href="../index.html" class="back">← Board</a>
+  <span class="match">TOR <span class="muted">@</span> CHI</span>
+  <span class="pill pre">PRE-GAME</span>
+  <span class="pill mode">LIVE</span>
+  <span class="yes-tag">YES = TOR wins</span>
+  <span class="sm muted" style="margin-left:auto">
+    <span class="dot off"></span>Kalshi&nbsp;&nbsp;<span class="dot off"></span>ESPN
+    &nbsp;·&nbsp;updates 30s</span>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="lab">Scoreboard</div>
+    <div class="score">
+      <div class="t"><div class="n">TOR</div><div class="p">0</div></div>
+      <div class="mid">Q0<br></div>
+      <div class="t"><div class="n">CHI</div><div class="p">0</div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="lab">Win Probability — TOR</div>
+    <div class="pb-row"><span class="pb-lab">Market</span><div class="pb-track"><div class="pb-fill" style="width:0%;background:#5b9cff"></div></div><span class="pb-val">—</span></div><div class="pb-row"><span class="pb-lab">Model</span><div class="pb-track"><div class="pb-fill" style="width:0%;background:#a78bfa"></div></div><span class="pb-val">—</span></div>
+    <div class="edge" style="color:#8b909a">Edge: —</div>
+  </div>
+  <div class="panel">
+    <div class="lab">Paper P&amp;L (all strategies)</div>
+    <div class="big" style="color:#e5e7eb">+$0.00</div>
+    <div class="sm muted">$900.00 of $900 · 9 strategies × $100</div>
+  </div>
+</div>
+
+
+
+<div class="cols">
+  <div class="panel">
+    <div class="lab">Kalshi Price (candles) · Model win-prob (— — line)</div>
+    <svg viewBox="0 0 1000 220" preserveAspectRatio="none" style="width:100%;height:220px"><line x1="38" y1="202.0" x2="992" y2="202.0" stroke="#1c2027" stroke-width="1"/><text x="4" y="205.0" fill="#5b6068" font-size="10">32%</text><line x1="38" y1="106.0" x2="992" y2="106.0" stroke="#1c2027" stroke-width="1"/><text x="4" y="109.0" fill="#5b6068" font-size="10">35%</text><line x1="38" y1="10.0" x2="992" y2="10.0" stroke="#1c2027" stroke-width="1"/><text x="4" y="13.0" fill="#5b6068" font-size="10">39%</text><line x1="43.2" y1="169.3" x2="43.2" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="40.1" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="53.6" y1="169.3" x2="53.6" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="50.4" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="63.9" y1="169.3" x2="63.9" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="60.8" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="74.3" y1="169.3" x2="74.3" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="71.2" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="84.7" y1="169.3" x2="84.7" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="81.6" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="95.0" y1="169.3" x2="95.0" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="91.9" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="105.4" y1="169.3" x2="105.4" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="102.3" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="115.8" y1="169.3" x2="115.8" y2="183.4" stroke="#34d399" stroke-width="1"/><rect x="112.7" y="169.3" width="6.2" height="14.1" fill="#34d399" rx="0.5"/><line x1="126.1" y1="169.3" x2="126.1" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="123.0" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="136.5" y1="169.3" x2="136.5" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="133.4" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="146.9" y1="169.3" x2="146.9" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="143.8" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="157.2" y1="169.3" x2="157.2" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="154.1" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="167.6" y1="169.3" x2="167.6" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="164.5" y="169.3" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="178.0" y1="70.8" x2="178.0" y2="169.3" stroke="#34d399" stroke-width="1"/><rect x="174.9" y="70.8" width="6.2" height="98.5" fill="#34d399" rx="0.5"/><line x1="188.4" y1="56.7" x2="188.4" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="185.2" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="198.7" y1="56.7" x2="198.7" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="195.6" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="209.1" y1="56.7" x2="209.1" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="206.0" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="219.5" y1="56.7" x2="219.5" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="216.4" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="229.8" y1="56.7" x2="229.8" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="226.7" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="240.2" y1="56.7" x2="240.2" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="237.1" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="250.6" y1="56.7" x2="250.6" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="247.5" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="260.9" y1="56.7" x2="260.9" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="257.8" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="271.3" y1="56.7" x2="271.3" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="268.2" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="281.7" y1="56.7" x2="281.7" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="278.6" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="292.1" y1="56.7" x2="292.1" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="288.9" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="302.4" y1="70.8" x2="302.4" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="299.3" y="70.8" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="312.8" y1="70.8" x2="312.8" y2="84.9" stroke="#f87171" stroke-width="1"/><rect x="309.7" y="70.8" width="6.2" height="14.1" fill="#f87171" rx="0.5"/><line x1="323.2" y1="70.8" x2="323.2" y2="84.9" stroke="#f87171" stroke-width="1"/><rect x="320.1" y="70.8" width="6.2" height="14.1" fill="#f87171" rx="0.5"/><line x1="333.5" y1="84.9" x2="333.5" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="330.4" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="343.9" y1="84.9" x2="343.9" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="340.8" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="354.3" y1="84.9" x2="354.3" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="351.2" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="364.6" y1="84.9" x2="364.6" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="361.5" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="375.0" y1="84.9" x2="375.0" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="371.9" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="385.4" y1="84.9" x2="385.4" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="382.3" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="395.8" y1="84.9" x2="395.8" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="392.6" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="406.1" y1="84.9" x2="406.1" y2="99.0" stroke="#34d399" stroke-width="1"/><rect x="403.0" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="416.5" y1="84.9" x2="416.5" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="413.4" y="84.9" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="426.9" y1="70.8" x2="426.9" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="423.7" y="70.8" width="6.2" height="14.1" fill="#34d399" rx="0.5"/><line x1="437.2" y1="70.8" x2="437.2" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="434.1" y="70.8" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="447.6" y1="70.8" x2="447.6" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="444.5" y="70.8" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="458.0" y1="70.8" x2="458.0" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="454.9" y="70.8" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="468.3" y1="70.8" x2="468.3" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="465.2" y="70.8" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="478.7" y1="70.8" x2="478.7" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="475.6" y="70.8" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="489.1" y1="56.7" x2="489.1" y2="70.8" stroke="#34d399" stroke-width="1"/><rect x="486.0" y="56.7" width="6.2" height="14.1" fill="#34d399" rx="0.5"/><line x1="499.4" y1="56.7" x2="499.4" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="496.3" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="509.8" y1="56.7" x2="509.8" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="506.7" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="520.2" y1="42.7" x2="520.2" y2="84.9" stroke="#34d399" stroke-width="1"/><rect x="517.1" y="42.7" width="6.2" height="14.1" fill="#34d399" rx="0.5"/><line x1="530.6" y1="42.7" x2="530.6" y2="56.7" stroke="#f87171" stroke-width="1"/><rect x="527.4" y="42.7" width="6.2" height="14.1" fill="#f87171" rx="0.5"/><line x1="540.9" y1="56.7" x2="540.9" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="537.8" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="551.3" y1="56.7" x2="551.3" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="548.2" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="561.7" y1="28.6" x2="561.7" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="558.6" y="28.6" width="6.2" height="28.2" fill="#34d399" rx="0.5"/><line x1="572.0" y1="28.6" x2="572.0" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="568.9" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="582.4" y1="28.6" x2="582.4" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="579.3" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="592.8" y1="28.6" x2="592.8" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="589.7" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="603.1" y1="28.6" x2="603.1" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="600.0" y="28.6" width="6.2" height="14.1" fill="#34d399" rx="0.5"/><line x1="613.5" y1="28.6" x2="613.5" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="610.4" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="623.9" y1="28.6" x2="623.9" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="620.8" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="634.2" y1="28.6" x2="634.2" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="631.1" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="644.6" y1="28.6" x2="644.6" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="641.5" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="655.0" y1="28.6" x2="655.0" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="651.9" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="665.4" y1="28.6" x2="665.4" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="662.2" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="675.7" y1="28.6" x2="675.7" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="672.6" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="686.1" y1="28.6" x2="686.1" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="683.0" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="696.5" y1="28.6" x2="696.5" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="693.4" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="706.8" y1="28.6" x2="706.8" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="703.7" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="717.2" y1="28.6" x2="717.2" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="714.1" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="727.6" y1="28.6" x2="727.6" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="724.5" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="737.9" y1="28.6" x2="737.9" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="734.8" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="748.3" y1="28.6" x2="748.3" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="745.2" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="758.7" y1="28.6" x2="758.7" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="755.6" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="769.1" y1="28.6" x2="769.1" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="765.9" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="779.4" y1="28.6" x2="779.4" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="776.3" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="789.8" y1="28.6" x2="789.8" y2="28.6" stroke="#34d399" stroke-width="1"/><rect x="786.7" y="28.6" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="800.2" y1="42.7" x2="800.2" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="797.1" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="810.5" y1="42.7" x2="810.5" y2="56.7" stroke="#f87171" stroke-width="1"/><rect x="807.4" y="42.7" width="6.2" height="14.1" fill="#f87171" rx="0.5"/><line x1="820.9" y1="56.7" x2="820.9" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="817.8" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="831.3" y1="56.7" x2="831.3" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="828.2" y="56.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="841.6" y1="42.7" x2="841.6" y2="56.7" stroke="#34d399" stroke-width="1"/><rect x="838.5" y="42.7" width="6.2" height="14.1" fill="#34d399" rx="0.5"/><line x1="852.0" y1="42.7" x2="852.0" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="848.9" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="862.4" y1="42.7" x2="862.4" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="859.3" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="872.8" y1="42.7" x2="872.8" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="869.6" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="883.1" y1="42.7" x2="883.1" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="880.0" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="893.5" y1="42.7" x2="893.5" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="890.4" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="903.9" y1="42.7" x2="903.9" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="900.7" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="914.2" y1="42.7" x2="914.2" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="911.1" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="924.6" y1="42.7" x2="924.6" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="921.5" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="935.0" y1="42.7" x2="935.0" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="931.9" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="945.3" y1="42.7" x2="945.3" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="942.2" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="955.7" y1="42.7" x2="955.7" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="952.6" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="966.1" y1="42.7" x2="966.1" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="963.0" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="976.4" y1="42.7" x2="976.4" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="973.3" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/><line x1="986.8" y1="42.7" x2="986.8" y2="42.7" stroke="#34d399" stroke-width="1"/><rect x="983.7" y="42.7" width="6.2" height="1.2" fill="#34d399" rx="0.5"/></svg>
+    <div class="flow" style="margin-top:14px">
+      <span class="sm muted">Book</span>
+      <div class="imb-track"><div class="imb-fill" style="width:100%"></div>
+        <div class="imb-mark" style="left:calc(50% - 1px)"></div></div>
+      <span class="sm mono">+0%</span>
+    </div>
+    <div class="sm muted">Last — · spread — ·
+      vol 0 · flow +0</div>
+  </div>
+  <div class="panel">
+    <div class="lab">Order Flow — recent trades</div>
+    <div class="tape-row"><span style="color:#34d399">YES</span><span class="mono">38¢</span><span class="muted mono">×1</span></div><div class="tape-row"><span style="color:#34d399">YES</span><span class="mono">40¢</span><span class="muted mono">×17.59</span></div><div class="tape-row"><span style="color:#34d399">YES</span><span class="mono">40¢</span><span class="muted mono">×1</span></div><div class="tape-row"><span style="color:#34d399">YES</span><span class="mono">39¢</span><span class="muted mono">×1</span></div><div class="tape-row"><span style="color:#34d399">YES</span><span class="mono">38¢</span><span class="muted mono">×1</span></div>
+  </div>
+</div>
+
+<h2>Strategies</h2>
+<div class="scards"><div class="scard"><div class="scard-top"><span class="scard-name">Edge (naive control)</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Mean-Reversion to Model</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Win-Prob Momentum</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Run Momentum</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Late-Game Favorite Lock</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Spread Capture</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Conviction + Flow Gate</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Conviction Hold</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div><div class="scard"><div class="scard-top"><span class="scard-name">Auto House (Claude-owned)</span><span class="scard-eq" style="color:#8b909a">$100.00 <small>(+$0.00)</small></span></div><div class="scard-sub">0 trades · 0W/0L · win —</div><div class="muted sm">Flat — waiting for signal</div></div></div>
+
+<div class="cols">
+  <div class="panel">
+    <div class="lab">Trade Journal — what fired, why, and the outcome</div>
+    <table><thead><tr><th>Clock</th><th>Strategy</th><th>Side</th><th>Entry→Exit</th>
+      <th>P&amp;L</th><th>Result</th><th>Reason</th></tr></thead>
+      <tbody><tr><td colspan="7" class="muted pad">No trades yet — strategies are watching the market.</td></tr></tbody></table>
+  </div>
+  <div class="panel">
+    <div class="lab">Play-by-Play</div>
+    <div class="muted sm pad">Waiting for play-by-play…</div>
+  </div>
+</div>
+
+<div class="foot">Generated 01:43:46 UTC · paper trading only, no real orders placed</div>
+</body></html>
