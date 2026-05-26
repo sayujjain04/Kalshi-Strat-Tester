@@ -81,6 +81,9 @@ def render_shard(game_dir, out_path):
         return False
 
     ticks = _read_jsonl(ticks_path)
+    # union-merge during git syncs can reorder JSONL lines, so sort by timestamp —
+    # otherwise ticks[-1] (and the candle/model order) can grab a stale early tick.
+    ticks.sort(key=lambda t: t.get("ts") or "")
     last = ticks[-1] if ticks else {}
     market = dict(last.get("market") or {})
     market["trades"] = _read_jsonl(os.path.join(game_dir, "trades.jsonl"), limit=15)
