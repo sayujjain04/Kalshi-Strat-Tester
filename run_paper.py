@@ -123,9 +123,12 @@ def run_daemon(strategy_keys, push_every_s=1800, scan_every_s=120,
     def _refresh_board(quick=True):
         try:
             import boards
-            boards.build(quick=quick)            # board + detail + changed shards
+            _s, _n = boards.build(quick=quick)   # board + detail + changed shards
+            print(f"refresh_board: rebuilt board + {_n} shards", flush=True)
         except Exception as e:
-            print(f"board build error: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"board build error: {e}", flush=True)
 
     def pusher():
         while True:
