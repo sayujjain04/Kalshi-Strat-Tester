@@ -62,7 +62,17 @@ def move(strategy, board, fund=None):
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 def _ledger():
-    return [json.loads(l) for l in open(LEDGER)] if os.path.exists(LEDGER) else []
+    rows = []
+    if os.path.exists(LEDGER):
+        for l in open(LEDGER):
+            l = l.strip()
+            if not l:
+                continue
+            try:
+                rows.append(json.loads(l))
+            except Exception:
+                pass
+    return rows
 
 
 def _label2key():
@@ -751,10 +761,18 @@ def build(quick=False):
     state = load_state()
     live, bt, curve = compute_stats()
     render_board(state, live, bt, curve)
-    render_progress()
-    for key in strat.REGISTRY:
-        render_strategy_detail(key, state, live, bt, curve)
+    # render shards EARLY (live games are the time-sensitive part) and guard the rest,
+    # so a failure in a detail page can never block the live shards from updating.
     rendered = shards.render_all(changed_only=quick)
+    try:
+        render_progress()
+    except Exception as e:
+        print(f"progress render error: {e}")
+    for key in strat.REGISTRY:
+        try:
+            render_strategy_detail(key, state, live, bt, curve)
+        except Exception as e:
+            print(f"detail {key} render error: {e}")
     return state, len(rendered)
 
 

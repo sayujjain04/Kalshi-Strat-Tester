@@ -40,7 +40,13 @@ def _all_decisions(strategy_label=None):
     for p in glob.glob(os.path.join(GAMES, "*", "paper_decisions.jsonl")):
         gid = os.path.basename(os.path.dirname(p))
         for line in open(p):
-            d = json.loads(line)
+            line = line.strip()
+            if not line:
+                continue
+            try:                       # tolerate a partial line the daemon is mid-writing
+                d = json.loads(line)
+            except Exception:
+                continue
             if d.get("event") != "close":
                 continue
             if strategy_label and d.get("strategy") != strategy_label:
