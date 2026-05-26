@@ -10,10 +10,11 @@ it's no longer in today's discovery to self-heal. Settles on the official Kalshi
 """
 import glob, json, os, sys
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)            # deploy/ script needs the repo root for engine/kalshi_client
+
 import engine
 from kalshi_client import KalshiClient, PROD
-
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _client = None
 
 
