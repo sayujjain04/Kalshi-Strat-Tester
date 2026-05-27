@@ -316,6 +316,14 @@ class LiveEngine:
         self._declog = tradelog.DecisionLogger(self._gdir, "paper")
         self._tickrec = tradelog.MarketRecorder(self._gdir, heartbeat_s=30)
         self._tapelog = tradelog.TradeTapeLogger(self._gdir)
+        # Live latency instrumentation. The microstructure edge we're chasing (EXP-006) is
+        # latency-sensitive, so MEASURE tick-to-decision lag — don't assume it's fine
+        # (red-team RED_TEAM.md). data-age = how stale the market snapshot is when a
+        # strategy acts on it (now − Kalshi WS last_update); loop_dt = actual eval cadence;
+        # ws_gap = reconnect/staleness exposure. Summarised into meta.json + the board.
+        from collections import deque as _deque
+        self._lat_ages = _deque(maxlen=6000)
+        self._lat = {"loop_dt_max": 0.0, "ws_gap_max": 0.0, "stale_ticks": 0, "_last": None}
         # persist the Kalshi ticker + teams at capture START (no final_* yet) so live
         # shards can render before the game ends. _save_meta overwrites with finals.
         tradelog.save_meta(self._gdir, {
@@ -363,6 +371,7 @@ class LiveEngine:
         try:
             while not self._stop:
                 market = self.market_state.snapshot()
+                self._record_latency(market)
                 game = self.game_state.snapshot()
                 # Kalshi settlement is the AUTHORITATIVE game-over — ESPN can hang on
                 # "in" forever (stuck/mismatched event), which would capture endlessly.
@@ -372,6 +381,12 @@ class LiveEngine:
                     if kalshi_result(self.client, self.ticker):
                         self.log("Kalshi market settled — ending capture.")
                         game["status"] = "post"
+                if self._tick_i % 120 == 0:           # ~every 4 min: surface live latency
+                    ls = self._latency_summary()
+                    if ls:
+                        self.log(f"latency: data-age p50 {ls['age_ms_p50']:.0f}ms "
+                                 f"p95 {ls['age_ms_p95']:.0f}ms · loop_max {ls['loop_dt_ms_max']:.0f}ms "
+                                 f"· ws_gaps {ls['stale_ticks']}")
                 # dead-data guard: game-derived signals only re-fire when ESPN
                 # actually advanced (its timestamp / score / clock changed)
                 sig = (game.get("win_prob_ts"), game["score"]["home"],
@@ -425,6 +440,31 @@ class LiveEngine:
         finally:
             self._save_meta()
 
+    def _record_latency(self, market):
+        """One sample per eval tick: how stale the market data is when we act on it."""
+        now_ms = time.time() * 1000
+        lu = market.get("last_update_ms")
+        if lu:
+            age = now_ms - lu
+            self._lat_ages.append(age)
+            if age > 5000:                       # >5s stale ⇒ WS reconnect/gap exposure
+                self._lat["stale_ticks"] += 1
+                self._lat["ws_gap_max"] = max(self._lat["ws_gap_max"], age)
+        if self._lat["_last"] is not None:
+            self._lat["loop_dt_max"] = max(self._lat["loop_dt_max"], now_ms - self._lat["_last"])
+        self._lat["_last"] = now_ms
+
+    def _latency_summary(self):
+        a = sorted(self._lat_ages)
+        if not a:
+            return None
+        pct = lambda p: round(a[min(len(a) - 1, int(len(a) * p))], 1)
+        return {"n": len(a), "age_ms_mean": round(sum(a) / len(a), 1),
+                "age_ms_p50": pct(0.50), "age_ms_p95": pct(0.95), "age_ms_max": round(a[-1], 1),
+                "loop_dt_ms_max": round(self._lat["loop_dt_max"], 1),
+                "ws_gap_ms_max": round(self._lat["ws_gap_max"], 1),
+                "stale_ticks": self._lat["stale_ticks"]}
+
     def _settle_open(self, game, market):
         """Close any open paper position at the final $1/$0 outcome — Kalshi's official
         result if it's posted, else inferred from the ESPN final score."""
@@ -449,6 +489,7 @@ class LiveEngine:
             "final_score": g.get("score"), "final_status": g.get("status"),
             "strategies": [{"strategy": s.label, "equity": round(s.account.equity(m), 2),
                             "trades": len(s.account.closed)} for s in self.strategies],
+            "latency": self._latency_summary(),     # tick-to-decision profile for this game
             "saved_at": datetime.now(timezone.utc).isoformat(),
         })
         # append each strategy's outcome to the performance-history ledger

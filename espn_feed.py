@@ -42,8 +42,14 @@ def league_for(series):
 
 # Kalshi → ESPN abbreviation overrides (NBA differs in a few; other leagues mostly match)
 TEAM_MAP = {
+    # NBA
     "BRK": "BKN", "GSW": "GS", "NOR": "NO", "NYK": "NY",
     "PHX": "PHX", "SAS": "SA", "UTA": "UTAH",
+    # WNBA — Kalshi codes that differ from ESPN's (this gap kept the entire WNBA corpus
+    # empty: discover's frozenset keys never matched, LAB_REVIEW S2). CONN→CON, PDX→POR.
+    # (JNT/NGR are All-Star/exhibition markets with no ESPN scoreboard entry — won't match,
+    # which is correct; they aren't regular games.)
+    "CONN": "CON", "PDX": "POR",
 }
 
 
