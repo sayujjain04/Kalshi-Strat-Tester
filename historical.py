@@ -95,7 +95,7 @@ def fetch_and_store(g, client):
         return "nocandles"
     data["kalshi_result"] = g.get("kalshi_result")   # official settlement for simulate()
     try:                                              # condensed trade tape for order-flow backtests
-        data["flow"] = fetch_flow(client, g["ticker"])
+        data["flow"] = _clip_flow(fetch_flow(client, g["ticker"]), data.get("candles") or [])
     except Exception:
         data["flow"] = []
     os.makedirs(CORPUS, exist_ok=True)
@@ -128,13 +128,39 @@ def build(series_list=None, limit=None):
     return dict(tally)
 
 
-def fetch_flow(client, ticker, bucket_s=30, max_pages=80):
-    """Pull the full historical trade tape (/markets/trades, paginated) and condense to
-    per-30s buckets: [bucket_ts, net_signed_flow, volume, last_yes_price]. Net flow uses
-    the order-flow convention (YES-taker +, NO-taker −). Compact (~hundreds/game) so it
-    fits git; raw per-trade would be millions of rows → that's the Postgres trigger."""
-    buckets, cursor = {}, None
-    for _ in range(max_pages):
+LARGE_TRADE = 500     # contracts; a single print ≥ this is "large" (informed-flow proxy).
+                      # Typical trades run ~90–1100, so 500 flags genuinely big prints;
+                      # tunable — we also store max_single_trade so it can be recalibrated
+                      # from the data without re-fetching.
+FLOW_MAX_PAGES = 400  # safety cap; 400k trades. Logs if hit (was 80 → silently truncated)
+
+
+def _clip_flow(flow, candles, margin=60):
+    """Keep only buckets inside the game's price-action window. The raw tape spans DAYS
+    of pre-game trading (~60h → 7000+ noise buckets, 13× bloat) and pre-game flow has no
+    in-game price to trade against — and would leak into the first in-game decisions
+    (audit M2). The candle ts-range is the market-data window we actually backtest over."""
+    ts = [c["ts"] for c in candles if c.get("ts")]
+    if not ts:
+        return flow
+    lo, hi = min(ts) - margin, max(ts) + margin
+    return [b for b in flow if lo <= b[0] <= hi]
+
+
+def fetch_flow(client, ticker, bucket_s=30, max_pages=FLOW_MAX_PAGES):
+    """Pull the FULL historical trade tape (/markets/trades, paginated) and condense to
+    per-30s microstructure buckets. Compact (~hundreds/game, gz) so it fits git; the raw
+    per-trade tape (≈30–110k rows/game) is re-fetchable from this same endpoint for ~2mo,
+    so we store the condensed signal, not the raw stream (that's the Postgres trigger).
+
+    Each bucket is a list — fields APPEND-ONLY so older 4-field buckets stay readable and
+    `engine.simulate`/`edge_discovery` (which read index 1 = net) keep working:
+      [0] bucket_ts          [1] net_signed_flow (YES-taker +)   [2] volume (contracts)
+      [3] last_yes_price     [4] n_trades       [5] max_single_trade
+      [6] large_trade_vol (volume from prints ≥ LARGE_TRADE — informed-flow proxy)
+    """
+    buckets, cursor, pages = {}, None, 0
+    while pages < max_pages:
         p = {"ticker": ticker, "limit": 1000}
         if cursor:
             p["cursor"] = cursor
@@ -150,16 +176,24 @@ def fetch_flow(client, ticker, bucket_s=30, max_pages=80):
             signed = cnt if tr.get("taker_side") == "yes" else -cnt
             price = tr.get("yes_price_dollars")
             b = int(ts // bucket_s * bucket_s)
-            e = buckets.setdefault(b, [0.0, 0.0, None])
+            e = buckets.setdefault(b, [0.0, 0.0, None, 0, 0.0, 0.0])  # net,vol,px,n,max,big
             e[0] += signed
             e[1] += cnt
             if price not in (None, ""):
                 e[2] = float(price)
+            e[3] += 1
+            e[4] = max(e[4], cnt)
+            if cnt >= LARGE_TRADE:
+                e[5] += cnt
         cursor = d.get("cursor")
+        pages += 1
         if not cursor or not trades:
             break
         time.sleep(0.1)
-    return [[b, round(v[0], 2), round(v[1], 2), v[2]] for b, v in sorted(buckets.items())]
+    if pages >= max_pages and cursor:
+        print(f"  ⚠ {ticker}: hit {max_pages}-page cap, tape truncated", flush=True)
+    return [[b, round(v[0], 2), round(v[1], 2), v[2], v[3], round(v[4], 2), round(v[5], 2)]
+            for b, v in sorted(buckets.items())]
 
 
 def backfill_flow(limit=None):
@@ -174,13 +208,16 @@ def backfill_flow(limit=None):
                 rec = json.load(f)
         except Exception:
             tally["readerr"] += 1; continue
-        if "flow" in rec.get("data", {}):   # presence, not truthiness — empty [] = probed, no tape
+        fl = rec.get("data", {}).get("flow")
+        # skip if already on the ENRICHED schema (7 fields) or empty (no tape, can't enrich);
+        # re-fetch games still on the old 4-field schema to upgrade them with microstructure.
+        if fl is not None and (len(fl) == 0 or len(fl[0]) >= 7):
             tally["skip"] += 1; continue
         ticker = (rec.get("g") or {}).get("ticker")
         if not ticker:
             tally["noticker"] += 1; continue
         try:
-            flow = fetch_flow(client, ticker)
+            flow = _clip_flow(fetch_flow(client, ticker), rec["data"].get("candles") or [])
         except Exception as e:
             print(f"  flow err {os.path.basename(p)}: {e}", flush=True); tally["err"] += 1; continue
         rec["data"]["flow"] = flow

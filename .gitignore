@@ -9,4 +9,10 @@ dashboards/
 __pycache__/
 *.pyc
 
+# Raw per-game trade tape — high-write, re-committed every push → repo bloat (LAB_REVIEW
+# S1). Backtests use the CONDENSED flow in data/backtest (historical.fetch_flow); this raw
+# file's only consumer is the live shard's last-15-trades strip, and the full tape is
+# re-fetchable from Kalshi /markets/trades for ~2mo. So keep it local, don't commit it.
+data/games/*/trades.jsonl
+
 .DS_Store
