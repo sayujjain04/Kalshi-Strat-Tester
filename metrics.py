@@ -46,7 +46,11 @@ def snapshot():
 
     best, best_score = None, None
     for k, r in bt.items():
-        if k in CONTROL:
+        # Exclude the control AND strategies that barely trade in backtest: a strategy
+        # that never fires (e.g. spread_cap, 0 trades — needs book depth we can't replay)
+        # isn't a "neutral 0.0 best", it's UNMEASURED. Crowning it hides that every
+        # strategy that actually trades is currently negative (post-C1 honest pricing).
+        if k in CONTROL or (r.get("trades") or 0) < 10:
             continue
         sc = robustness(r.get("per_game"), r.get("worst"))
         if best_score is None or sc > best_score:

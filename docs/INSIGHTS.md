@@ -6,15 +6,15 @@
 
 | strategy | $/game | win% | profitable | worst |
 |---|---|---|---|---|
-| edge_naive | +11.82 | 51% | 164/246 | -16.47 |
-| conviction | +5.22 | 50% | 149/246 | -10.42 |
-| auto_house | +2.82 | 68% | 118/246 | -4.39 |
-| flow_confirm | +1.63 | 51% | 98/246 | -7.13 |
-| late_fav | +0.65 | 90% | 32/246 | -2.99 |
-| wp_momentum | +0.61 | 39% | 68/246 | -21.62 |
 | spread_cap | +0.00 | 0% | 0/246 | +0.00 |
-| run_momentum | -0.33 | 31% | 42/246 | -5.11 |
-| model_revert | -0.74 | 39% | 60/246 | -33.89 |
+| late_fav | -0.12 | 43% | 11/246 | -13.24 |
+| flow_confirm | -0.28 | 34% | 51/246 | -15.48 |
+| auto_house | -0.56 | 41% | 50/246 | -29.50 |
+| run_momentum | -1.22 | 10% | 4/246 | -8.09 |
+| conviction | -1.51 | 29% | 72/246 | -40.51 |
+| model_revert | -3.93 | 24% | 9/246 | -39.46 |
+| wp_momentum | -6.32 | 7% | 8/246 | -46.05 |
+| edge_naive | -10.45 | 20% | 47/246 | -52.68 |
 
 ## Captured live games (13) — includes real order flow
 

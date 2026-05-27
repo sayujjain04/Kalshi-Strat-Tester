@@ -194,6 +194,50 @@ def backfill_flow(limit=None):
     return done
 
 
+def backfill_results(limit=None):
+    """C2: capture Kalshi's OFFICIAL settlement (`result`) for each corpus game while it's
+    still retrievable. The corpus was stored before settlement so `kalshi_result` is None
+    everywhere → we silently settle on ESPN score with no cross-check, and the authoritative
+    truth is aging out of the API. This fills it and FLAGS any ESPN-vs-Kalshi disagreement
+    (suspended/forfeited/OT-scoring edge cases the score fallback would get wrong)."""
+    client = KalshiClient(PROD)
+    tally, disagreements = Counter(), []
+    for p in sorted(glob.glob(os.path.join(CORPUS, "*.json.gz")))[:limit]:
+        try:
+            with gzip.open(p, "rt", encoding="utf-8") as f:
+                rec = json.load(f)
+        except Exception:
+            tally["readerr"] += 1; continue
+        data = rec.get("data", {})
+        if data.get("kalshi_result") in ("yes", "no"):
+            tally["have"] += 1; continue
+        ticker = (rec.get("g") or {}).get("ticker")
+        if not ticker:
+            tally["noticker"] += 1; continue
+        res = engine.kalshi_result(client, ticker)
+        if res not in ("yes", "no"):
+            tally["aged_out"] += 1; continue          # no longer retrievable → keep ESPN fallback
+        # cross-check against the ESPN-score fallback we'd otherwise trust blindly
+        meta = engine.parse_ticker(ticker)
+        plays = data.get("plays") or []
+        last = plays[-1] if plays else {}
+        espn = engine._settle_yes(None, {"home": last.get("homeScore"),
+                                         "away": last.get("awayScore")}, meta["yes_is_home"])
+        if espn is not None and (espn != (res == "yes")):
+            disagreements.append((os.path.basename(p), res, "yes" if espn else "no"))
+        data["kalshi_result"] = res
+        with gzip.open(p, "wt", encoding="utf-8") as f:
+            json.dump(rec, f)
+        tally["filled"] += 1
+        if tally["filled"] % 25 == 0:
+            print(f"  …results filled {tally['filled']}", flush=True)
+    print(f"results backfill: {dict(tally)}", flush=True)
+    if disagreements:
+        print(f"  ⚠ ESPN vs Kalshi DISAGREE on {len(disagreements)} games "
+              f"(Kalshi is authoritative): {disagreements[:10]}", flush=True)
+    return tally, disagreements
+
+
 def load_corpus(limit=None):
     """[(g, data)] for backtest.run_suite / engine.simulate."""
     out = []
@@ -226,6 +270,10 @@ if __name__ == "__main__":
         print("== trade-flow backfill ==", flush=True)
         done = backfill_flow(limit)
         print(f"flow added to {len(done)} games", flush=True)
+    elif "--results" in a:
+        limit = int(a[a.index("--limit") + 1]) if "--limit" in a else None
+        print("== Kalshi official-result backfill ==", flush=True)
+        backfill_results(limit)
     else:
         series = a[a.index("--leagues") + 1].split(",") if "--leagues" in a else None
         limit = int(a[a.index("--limit") + 1]) if "--limit" in a else None

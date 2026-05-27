@@ -590,6 +590,17 @@ def simulate(meta, data, strategies, frame_cb=None, log=lambda *a: None, slippag
                 break
         return c or (candles_all[0] if candles_all else None)
 
+    def fill_candle(t):
+        """The price a signal from time t can ACTUALLY transact at: the first bar that
+        CLOSES after t (so it already reflects the play we're reacting to). Using the
+        prior bar (candle_at) was a look-ahead leak — it let strategies buy at a price
+        struck up to ~60s BEFORE the play, booking the market's own catch-up as 'edge'
+        (the C1 finding: edge_naive +$11.82/g vanishes once priced honestly)."""
+        for cc in candles_all:
+            if cc["ts"] and cc["ts"] > t:
+                return cc
+        return candle_at(t)            # end of game: no later bar, fall back
+
     def candles_upto(t):
         return [cc for cc in candles_all if cc["ts"] and cc["ts"] <= t] or candles_all[:1]
 
@@ -604,7 +615,9 @@ def simulate(meta, data, strategies, frame_cb=None, log=lambda *a: None, slippag
             last_wp = wp
             model_series.append(wp if meta["yes_is_home"] else 1 - wp)
         game = feed.state.snapshot()
-        market = market_from_candle(candle_at(t))
+        # FILL at the bar that closes after the play (already reflects it); HISTORY is
+        # everything up to t. This kills the C1 look-ahead leak without peeking forward.
+        market = market_from_candle(fill_candle(t))
         if _flow_ends:
             j = bisect.bisect_right(_flow_ends, t) - 1   # latest bucket ending ≤ t
             if j >= 0:
