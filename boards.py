@@ -213,6 +213,53 @@ def research_log(n=14):
     return rows[-n:][::-1]
 
 
+def _ago(iso):
+    """Humanize an ISO timestamp → 'just now' / '37m ago' / '3h ago' / '2d ago'."""
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        s = (datetime.now(timezone.utc) - dt).total_seconds()
+    except Exception:
+        return "?"
+    if s < 90:        return "just now"
+    if s < 5400:      return f"{int(s/60)}m ago"
+    if s < 172800:    return f"{int(s/3600)}h ago"
+    return f"{int(s/86400)}d ago"
+
+
+def last_iteration(max_gap_min=60):
+    """The most recent cluster of research-log entries = the last iteration's decisions.
+    Entries from one run land within minutes of each other; a gap > max_gap_min starts a
+    new iteration. Returns (when_iso, [entries newest-first])."""
+    p = os.path.join(RESEARCH, "log.jsonl")
+    rows = []
+    if os.path.exists(p):
+        for line in open(p):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except Exception:
+                pass
+    rows = [r for r in rows if r.get("ts")]
+    if not rows:
+        return None, []
+    rows.sort(key=lambda r: r["ts"])
+    cluster = [rows[-1]]
+    for r in reversed(rows[:-1]):
+        try:
+            gap = (datetime.fromisoformat(cluster[-1]["ts"].replace("Z", "+00:00"))
+                   - datetime.fromisoformat(r["ts"].replace("Z", "+00:00"))).total_seconds()
+        except Exception:
+            break
+        if gap <= max_gap_min * 60:
+            cluster.append(r)
+        else:
+            break
+    # cluster was built newest→oldest; its last element is the iteration's start time
+    return cluster[-1]["ts"], cluster  # (when_started, entries newest-first)
+
+
 def open_questions():
     p = os.path.join(ROOT, "docs", "OPEN_QUESTIONS.md")
     out, in_open = [], False
@@ -459,6 +506,22 @@ def render_board(state, live, bt, curve):
                f'<tbody>{rl_rows}</tbody></table>' if rl_rows else
                '<div class="muted pad">No autonomous iterations yet — the daily local research loop fills this in.</div>')
 
+    # "Last iteration" — when the most recent research run happened + what it decided
+    li_when, li_entries = last_iteration()
+    if li_entries:
+        latest_ts = li_entries[0]["ts"]
+        li_items = "".join(
+            f'<li style="margin-bottom:7px"><span class="stage PAPER">{r.get("kind","note")}</span> '
+            f'<b>{r.get("title","")}</b>'
+            f'<div class="desc" style="max-width:660px">{r.get("detail","")}</div></li>'
+            for r in li_entries)
+        last_iter_html = (
+            f'<div class="sub" style="margin-bottom:8px">ran <b style="color:var(--acc)">{_ago(latest_ts)}</b> '
+            f'· {latest_ts[:16].replace("T", " ")} UTC · <b>{len(li_entries)}</b> decision(s) this run</div>'
+            f'<ul style="line-height:1.45;font-size:13px;list-style:none;margin:0;padding:0">{li_items}</ul>')
+    else:
+        last_iter_html = '<div class="muted pad">No research iteration logged yet.</div>'
+
     # lab progress: a clean, clickable card (the full chart lives on lab.html)
     mets = lab_metrics()
     latest = mets[-1] if mets else {}
@@ -580,6 +643,8 @@ def render_board(state, live, bt, curve):
 </tr></thead><tbody>{table}</tbody></table>
 <h2>Lab progress <span class="sub">is the lab tending toward higher / more consistent profit?</span></h2>
 {progress}
+<h2>Last iteration <span class="sub">what the most recent research run decided · when it ran</span></h2>
+<div class="panel">{last_iter_html}</div>
 <h2>Research log <span class="sub">what the quant did — newest first</span></h2>
 <div class="panel">{rl_html}</div>
 <h2>Data we have to learn from</h2>
