@@ -29,6 +29,10 @@ LEAGUES = {
     "KXNCAABGAME": ("NCAAM", "basketball/mens-college-basketball"),
     "KXNCAAMGAME": ("NCAAM", "basketball/mens-college-basketball"),
     "KXNCAAWGAME": ("NCAAW", "basketball/womens-college-basketball"),
+    # MLB — the one thinner-than-NBA market that still carries ESPN win-probability
+    # (NHL/soccer don't), so our ESPN-WP-vs-price pipeline transfers as-is. Testing
+    # whether a ~9x-thinner-volume market is any less efficient (LAB_REVIEW Phase 3).
+    "KXMLBGAME":  ("MLB",   "baseball/mlb"),
 }
 
 
