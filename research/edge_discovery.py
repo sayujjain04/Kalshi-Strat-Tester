@@ -247,7 +247,130 @@ def mispricing_scan(obs, label):
     return L, rows
 
 
+FLOW_OUT = os.path.join(ROOT, "docs", "FLOW_SCAN.md")
+
+
+def _mid_after(candles, t):
+    """(mid, yb, ya) of the first candle ENDING > t — the de-leaked price you could
+    transact at once you've observed everything up to t (same anti-look-ahead rule as
+    engine.fill_candle)."""
+    for c in candles:
+        if c.get("ts") and c["ts"] > t and c.get("c") is not None:
+            yb = c.get("yb") or max(0.0, c["c"] - 0.005)
+            ya = c.get("ya") or min(1.0, c["c"] + 0.005)
+            return c["c"], yb, ya
+    return None, None, None
+
+
+def flow_forward_scan(league=None, horizons=(30, 60, 120)):
+    """EXP-006: does signed order-flow predict the NEXT price move? For each enriched flow
+    bucket [ts,net,vol,px,n,max,big], decide at bucket CLOSE (net flow only known then),
+    enter at the de-leaked mid, and measure the forward mid move IN THE FLOW'S DIRECTION
+    over each horizon. GROSS = does flow predict direction at all (signal). NET = after the
+    round-trip cost you'd actually pay (cross the spread twice + 2 fees) — the tradeable
+    bar, which is HIGH because this is a round trip, not a hold-to-free-settlement.
+    Game-clustered (one game = one bet), OOS time-split."""
+    def strength(net):
+        a = abs(net)
+        if a < 50:   return None              # below informative threshold
+        if a < 200:  return "1_flow50-200"
+        if a < 1000: return "2_flow200-1k"
+        return "3_flow1k+"
+
+    games = []
+    for p in sorted(glob.glob(os.path.join(CORPUS, "*.json.gz"))):
+        try:
+            rec = json.load(gzip.open(p, "rt", encoding="utf-8"))
+        except Exception:
+            continue
+        g, d = rec.get("g", {}), rec.get("data", {})
+        if league and g.get("league") != league:
+            continue
+        fl = d.get("flow") or []
+        cs = sorted((c for c in (d.get("candles") or []) if c.get("ts")), key=lambda c: c["ts"])
+        if not fl or len(fl[0]) < 7 or len(cs) < 5:
+            continue
+        games.append((os.path.basename(p).replace(".json.gz", ""), g.get("date", ""), cs, fl))
+    games.sort(key=lambda x: (x[1], x[0]))
+    gids = [g[0] for g in games]
+    split = set(gids[: int(len(gids) * 0.6)])
+
+    def scan(subset):
+        # cell -> game -> {gross:[], net:[]}
+        cells = defaultdict(lambda: defaultdict(lambda: {"gross": [], "net": []}))
+        for gid, date, cs, fl in subset:
+            for b in fl:
+                bt, net = b[0], b[1]
+                st = strength(net)
+                if st is None:
+                    continue
+                mid0, yb0, ya0 = _mid_after(cs, bt + 30)        # decide at bucket close
+                if mid0 is None:
+                    continue
+                spread = max(0.0, ya0 - yb0)
+                hurdle = spread + 2 * _hurdle(mid0)             # round trip: 2 crossings+fees
+                for h in horizons:
+                    midh, _, _ = _mid_after(cs, bt + 30 + h)
+                    if midh is None:
+                        continue
+                    gross = (midh - mid0) * (1 if net > 0 else -1)
+                    cells[(h, st)][gid]["gross"].append(gross)
+                    cells[(h, st)][gid]["net"].append(gross - hurdle)
+        rows = []
+        for (h, st), bygame in cells.items():
+            if len(bygame) < MIN_GAMES:
+                continue
+            g_means = [sum(v["gross"]) / len(v["gross"]) for v in bygame.values()]
+            n_means = [sum(v["net"]) / len(v["net"]) for v in bygame.values()]
+            rows.append({"h": h, "st": st, "games": len(bygame),
+                         "gross": sum(g_means) / len(g_means),
+                         "net": sum(n_means) / len(n_means),
+                         "gross_pos": sum(1 for x in g_means if x > 0) / len(g_means)})
+        return {(r["h"], r["st"]): r for r in rows}
+
+    disc = scan([g for g in games if g[0] in split])
+    hold = scan([g for g in games if g[0] not in split])
+
+    L = ["# FLOW SCAN — EXP-006: does order-flow predict the next price move?",
+         f"\n_`research/edge_discovery.py --flow`. {len(games)} games"
+         f"{f' ({league})' if league else ''} with enriched flow. Decide at each 30s flow "
+         "bucket's close, enter de-leaked, measure forward mid move in the flow's direction. "
+         "Game-clustered; 60/40 OOS time-split._\n",
+         "> GROSS = does flow predict direction (signal, ignoring cost). NET = after the "
+         "round-trip you'd actually pay (2× spread + 2 fees) — the real tradeable bar. "
+         "A real edge needs GROSS>0 in BOTH halves AND NET>0.\n",
+         "| horizon | flow strength | games(d/h) | GROSS disc ¢ | GROSS hold ¢ | gross+% | NET disc ¢ | NET hold ¢ |",
+         "|---|---|---|---|---|---|---|---|"]
+    for key in sorted(disc, key=lambda k: (k[0], k[1])):
+        d, h = disc[key], hold.get(key)
+        L.append(f"| {key[0]}s | {key[1][2:]} | {d['games']}/{h['games'] if h else 0} | "
+                 f"{d['gross']*100:+.2f} | {h['gross']*100:+.2f} | {d['gross_pos']*100:.0f}% | "
+                 f"{d['net']*100:+.2f} | {h['net']*100:+.2f} |" if h else
+                 f"| {key[0]}s | {key[1][2:]} | {d['games']}/0 | {d['gross']*100:+.2f} | — | "
+                 f"{d['gross_pos']*100:.0f}% | {d['net']*100:+.2f} | — |")
+    # verdict
+    survivors = [k for k in disc if hold.get(k) and disc[k]["gross"] > 0 and hold[k]["gross"] > 0]
+    tradeable = [k for k in survivors if disc[k]["net"] > 0 and hold[k]["net"] > 0]
+    L += ["", f"**GROSS signal survives OOS in {len(survivors)} cells; NET (tradeable after "
+          f"round-trip cost) in {len(tradeable)}.**",
+          "_Gross-positive-but-net-negative = flow predicts direction but the move is too "
+          "small to clear the round-trip cost (a real finding: signal exists, not harvestable "
+          "this way — would need a maker/spread-capture execution, not a spread-crossing taker)._"]
+    os.makedirs(os.path.dirname(FLOW_OUT), exist_ok=True)
+    open(FLOW_OUT, "w").write("\n".join(L) + "\n")
+    print(f"Wrote {FLOW_OUT}")
+    print(f"  {len(games)} games · GROSS survives OOS: {len(survivors)} cells · tradeable NET: {len(tradeable)}")
+    for k in sorted(survivors, key=lambda k: -hold[k]["gross"])[:8]:
+        print(f"   {k[0]}s {k[1][2:]:10} gross disc {disc[k]['gross']*100:+.2f}¢ hold {hold[k]['gross']*100:+.2f}¢ "
+              f"net hold {hold[k]['net']*100:+.2f}¢ ({disc[k]['games']}/{hold[k]['games']}g)")
+    return survivors, tradeable
+
+
 def main():
+    if "--flow" in sys.argv:
+        league = sys.argv[sys.argv.index("--league") + 1] if "--league" in sys.argv else None
+        flow_forward_scan(league)
+        return
     league = sys.argv[sys.argv.index("--league") + 1] if "--league" in sys.argv else None
     obs = observations(league)
     if not obs:
