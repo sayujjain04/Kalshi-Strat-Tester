@@ -10,3 +10,20 @@ _`research/market_making.py`. Captured games; for each taker fill WE are the mak
 | 60s | 214,801 | 60,393,412 | +0.29 | 1.13 | **-0.84** | 28% |
 
 **Verdict: Net **-0.78¢/contract** — NEGATIVE. Adverse selection + the maker fee (1.13¢) exceed the realized spread; passive MM loses on this market. (Kalshi's per-fill fee vs a ~1-2¢ spread is the likely killer.)**
+
+## Fee sensitivity (the deciding variable)
+EXP-010 above assumed makers pay the FULL taker fee (worst case). Kalshi actually charges
+makers a **reduced** schedule (resting orders, "to encourage market making"). Net P&L vs the
+maker-fee level:
+
+| maker fee (vs taker) | net ¢/contract | |
+|---|---|---|
+| 0% (full exemption) | **+0.35** | profitable, scalable |
+| 25% of taker | **+0.07** | profitable |
+| 50% of taker | −0.22 | loses |
+| 100% (=taker) | −0.78 | loses |
+
+**Breakeven: MM is +EV if the sports maker fee is below ~31% of the taker fee (≤0.35¢/contract).**
+→ Decisive next step is to VERIFY Kalshi's actual NBA/WNBA **maker** fee (fee-schedule PDF, or
+read the realized fee on real maker-order fills). If ≤0.35¢/contract, market-making is the
+scalable edge to build; if higher, Kalshi sports is conclusively exhausted.
