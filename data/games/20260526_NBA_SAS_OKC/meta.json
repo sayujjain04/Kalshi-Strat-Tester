@@ -5,5 +5,59 @@
  "away": "SAS",
  "home": "OKC",
  "date": "20260526",
- "yes_team": "SAS"
+ "yes_team": "SAS",
+ "kalshi_result": null,
+ "final_score": {
+  "home": 127,
+  "away": 114
+ },
+ "final_status": "post",
+ "strategies": [
+  {
+   "strategy": "Edge (naive control)",
+   "equity": 88.96,
+   "trades": 17
+  },
+  {
+   "strategy": "Mean-Reversion to Model",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Win-Prob Momentum",
+   "equity": 97.0,
+   "trades": 3
+  },
+  {
+   "strategy": "Run Momentum",
+   "equity": 99.23,
+   "trades": 3
+  },
+  {
+   "strategy": "Late-Game Favorite Lock",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Spread Capture",
+   "equity": 100.0,
+   "trades": 0
+  },
+  {
+   "strategy": "Conviction + Flow Gate",
+   "equity": 102.47,
+   "trades": 2
+  },
+  {
+   "strategy": "Conviction Hold",
+   "equity": 104.11,
+   "trades": 2
+  },
+  {
+   "strategy": "Auto House (Claude-owned)",
+   "equity": 101.49,
+   "trades": 2
+  }
+ ],
+ "saved_at": "2026-05-27T03:17:04.310936+00:00"
 }
