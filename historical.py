@@ -94,6 +94,10 @@ def fetch_and_store(g, client):
     if not data or len(data.get("candles") or []) <= 5:
         return "nocandles"
     data["kalshi_result"] = g.get("kalshi_result")   # official settlement for simulate()
+    try:                                              # condensed trade tape for order-flow backtests
+        data["flow"] = fetch_flow(client, g["ticker"])
+    except Exception:
+        data["flow"] = []
     os.makedirs(CORPUS, exist_ok=True)
     with gzip.open(out, "wt", encoding="utf-8") as f:
         json.dump({"g": g, "data": data}, f)
@@ -124,6 +128,72 @@ def build(series_list=None, limit=None):
     return dict(tally)
 
 
+def fetch_flow(client, ticker, bucket_s=30, max_pages=80):
+    """Pull the full historical trade tape (/markets/trades, paginated) and condense to
+    per-30s buckets: [bucket_ts, net_signed_flow, volume, last_yes_price]. Net flow uses
+    the order-flow convention (YES-taker +, NO-taker −). Compact (~hundreds/game) so it
+    fits git; raw per-trade would be millions of rows → that's the Postgres trigger."""
+    buckets, cursor = {}, None
+    for _ in range(max_pages):
+        p = {"ticker": ticker, "limit": 1000}
+        if cursor:
+            p["cursor"] = cursor
+        d, err = client.get("/markets/trades", p)
+        if err or not d:
+            break
+        trades = d.get("trades") or []
+        for tr in trades:
+            ts = engine._iso_to_unix(tr.get("created_time"))
+            if ts is None:
+                continue
+            cnt = float(tr.get("count_fp") or 0)
+            signed = cnt if tr.get("taker_side") == "yes" else -cnt
+            price = tr.get("yes_price_dollars")
+            b = int(ts // bucket_s * bucket_s)
+            e = buckets.setdefault(b, [0.0, 0.0, None])
+            e[0] += signed
+            e[1] += cnt
+            if price not in (None, ""):
+                e[2] = float(price)
+        cursor = d.get("cursor")
+        if not cursor or not trades:
+            break
+        time.sleep(0.1)
+    return [[b, round(v[0], 2), round(v[1], 2), v[2]] for b, v in sorted(buckets.items())]
+
+
+def backfill_flow(limit=None):
+    """Add condensed trade-flow to each committed corpus game that lacks it. Lets the
+    order-flow strategies (trade_flow-based) finally backtest on ALL history, not just
+    the handful of captured-live games."""
+    client = KalshiClient(PROD)
+    done, tally = [], Counter()
+    for p in sorted(glob.glob(os.path.join(CORPUS, "*.json.gz")))[:limit]:
+        try:
+            with gzip.open(p, "rt", encoding="utf-8") as f:
+                rec = json.load(f)
+        except Exception:
+            tally["readerr"] += 1; continue
+        if "flow" in rec.get("data", {}):   # presence, not truthiness — empty [] = probed, no tape
+            tally["skip"] += 1; continue
+        ticker = (rec.get("g") or {}).get("ticker")
+        if not ticker:
+            tally["noticker"] += 1; continue
+        try:
+            flow = fetch_flow(client, ticker)
+        except Exception as e:
+            print(f"  flow err {os.path.basename(p)}: {e}", flush=True); tally["err"] += 1; continue
+        rec["data"]["flow"] = flow
+        with gzip.open(p, "wt", encoding="utf-8") as f:
+            json.dump(rec, f)
+        tally["ok"] += 1
+        done.append(os.path.basename(p))
+        if tally["ok"] % 20 == 0:
+            print(f"  …flow backfilled {tally['ok']} games", flush=True)
+    print(f"flow backfill: {dict(tally)}", flush=True)
+    return done
+
+
 def load_corpus(limit=None):
     """[(g, data)] for backtest.run_suite / engine.simulate."""
     out = []
@@ -151,6 +221,11 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     if "--stats" in a:
         stats()
+    elif "--flow" in a:
+        limit = int(a[a.index("--limit") + 1]) if "--limit" in a else None
+        print("== trade-flow backfill ==", flush=True)
+        done = backfill_flow(limit)
+        print(f"flow added to {len(done)} games", flush=True)
     else:
         series = a[a.index("--leagues") + 1].split(",") if "--leagues" in a else None
         limit = int(a[a.index("--limit") + 1]) if "--limit" in a else None

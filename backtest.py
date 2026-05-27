@@ -190,7 +190,12 @@ def fmt(agg, label="results"):
 if __name__ == "__main__":
     import sys
     ALL = list(strat.REGISTRY)
-    REPLAYABLE = ["edge_naive", "model_revert", "run_momentum", "late_fav", "conviction", "auto_house"]
+    # Backtestable on the corpus = price/winprob strategies + the trade_flow-based ones
+    # (wp_momentum/flow_confirm), now that historical.fetch_flow backfills per-30s flow.
+    # Only spread_cap stays out — it needs book-depth (imbalance/spread) Kalshi keeps no
+    # history of. (analyze.py runs the FULL registry; spread_cap just won't trade there.)
+    REPLAYABLE = ["edge_naive", "model_revert", "run_momentum", "late_fav", "conviction",
+                  "wp_momentum", "flow_confirm", "auto_house"]
 
     if "--captured" in sys.argv:
         # re-simulate over our captured live games (includes real order flow →

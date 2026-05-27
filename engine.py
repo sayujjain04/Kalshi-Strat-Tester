@@ -565,6 +565,14 @@ def simulate(meta, data, strategies, frame_cb=None, log=lambda *a: None, slippag
     """
     plays, wp_by_id = data["plays"], data["wp_by_id"]
     candles_all, times = data["candles"], data["times"]
+    # Per-30s trade-flow buckets backfilled from the Kalshi tape (historical.fetch_flow):
+    # [bucket_start, net_signed_flow, vol, last_yes_price]. Lets order-flow strategies
+    # (wp_momentum/flow_confirm/late_fav) backtest on ALL history, not just captured-live
+    # games. Use the most-recent COMPLETED bucket (end ≤ t) → matches the live trailing-30s
+    # recent_trade_flow with no look-ahead.
+    import bisect
+    _flow = data.get("flow") or []
+    _flow_ends = [b[0] + 30 for b in _flow]   # bucket end-times, ascending
     import paper_broker
     slip = paper_broker.DEFAULT_SLIPPAGE if slippage is None else slippage
     portfolio = Portfolio(100.0, log=log, slippage=slip)
@@ -597,6 +605,10 @@ def simulate(meta, data, strategies, frame_cb=None, log=lambda *a: None, slippag
             model_series.append(wp if meta["yes_is_home"] else 1 - wp)
         game = feed.state.snapshot()
         market = market_from_candle(candle_at(t))
+        if _flow_ends:
+            j = bisect.bisect_right(_flow_ends, t) - 1   # latest bucket ending ≤ t
+            if j >= 0:
+                market["trade_flow"] = _flow[j][1]
         market["history"] = [(cc["ts"] * 1000, cc["c"]) for cc in candles_upto(t)
                              if cc["ts"] and cc["c"] is not None]
         play_log.append({"period": (play.get("period") or {}).get("number", "?"),

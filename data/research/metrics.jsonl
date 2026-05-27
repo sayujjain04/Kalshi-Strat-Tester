@@ -7,3 +7,4 @@
 {"ts": "2026-05-25T22:04:28.211114+00:00", "north_star": 0.625, "best_strategy": "auto_house", "bt_per_game": 2.82, "bt_worst": -4.39, "backtest_games": 246, "captured_games": 7, "forward_bets": 18, "fwd_per_game": 2.345, "decay": 0.475}
 {"ts": "2026-05-25T22:05:45.999807+00:00", "north_star": 0.625, "best_strategy": "auto_house", "bt_per_game": 2.82, "bt_worst": -4.39, "backtest_games": 246, "captured_games": 7, "forward_bets": 18, "fwd_per_game": 2.345, "decay": 0.475}
 {"ts": "2026-05-25T22:14:11.610199+00:00", "north_star": 0.625, "best_strategy": "auto_house", "bt_per_game": 2.82, "bt_worst": -4.39, "backtest_games": 246, "captured_games": 7, "forward_bets": 18, "fwd_per_game": 2.345, "decay": 0.475}
+{"ts": "2026-05-27T05:25:21.479375+00:00", "north_star": 0.625, "best_strategy": "auto_house", "bt_per_game": 2.82, "bt_worst": -4.39, "backtest_games": 246, "captured_games": 13, "forward_bets": 50, "fwd_per_game": 1.545, "decay": 1.275}
