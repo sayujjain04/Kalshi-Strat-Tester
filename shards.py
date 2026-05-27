@@ -11,7 +11,8 @@ live `dashboards/` dir. mtime-gated so finished games aren't needlessly re-rende
     python3 shards.py            # render only changed/live games
     python3 shards.py --all      # re-render every captured game
 """
-import glob, json, os, sys
+import glob, json, os, sys, types
+from datetime import datetime, timezone
 
 import engine, dashboard
 import strategies as strat
@@ -59,6 +60,54 @@ def _candles_from_ticks(ticks):
     return [buckets[b] for b in order]
 
 
+def _results_from_log(game_dir, meta_file):
+    """Build the leaderboard + journal from what ACTUALLY happened live
+    (paper_decisions.jsonl + meta.json) — NOT a re-simulation, which diverges from the
+    real tick-by-tick decisions. This is the truthful record that matches the board."""
+    decs = _read_jsonl(os.path.join(game_dir, "paper_decisions.jsonl"))
+    journal, cur, wins, losses = [], {}, {}, {}
+    for d in decs:
+        lab, ev, sim = d.get("strategy"), d.get("event"), (d.get("sim") or {})
+        g = d.get("game") or {}
+        clock = f"Q{g.get('period','')} {g.get('clock','')}".strip()
+        tm = (d.get("ts") or "")[11:19]
+        if ev == "open":
+            t = types.SimpleNamespace(
+                strategy=lab, side=d.get("side"), qty=sim.get("qty"),
+                entry_price=sim.get("sim_fill_price"), entry_reason=sim.get("reason", ""),
+                entry_clock=clock, entry_time=tm, exit_price=None, exit_reason=None,
+                exit_clock=None, exit_time=None, pnl=None, result="OPEN")
+            cur[lab] = t
+            journal.append(t)
+        elif ev == "close":
+            t = cur.pop(lab, None)
+            if t is None:
+                t = types.SimpleNamespace(
+                    strategy=lab, side=d.get("side"), qty=sim.get("qty"),
+                    entry_price=None, entry_reason="", entry_clock=clock, entry_time=tm,
+                    exit_price=None, exit_reason=None, exit_clock=None, exit_time=None,
+                    pnl=None, result="")
+                journal.append(t)
+            t.exit_price = sim.get("sim_fill_price"); t.pnl = sim.get("sim_pnl")
+            t.result = sim.get("result") or "CLOSED"; t.exit_reason = sim.get("reason", "")
+            t.exit_clock = clock; t.exit_time = tm
+            if t.result == "WIN":
+                wins[lab] = wins.get(lab, 0) + 1
+            elif t.result == "LOSS":
+                losses[lab] = losses.get(lab, 0) + 1
+    journal.sort(key=lambda t: (t.entry_time or t.exit_time or ""), reverse=True)
+
+    lb = []
+    for s in (meta_file.get("strategies") or []):
+        lab, eq = s.get("strategy"), s.get("equity", 100.0) or 100.0
+        w, l = wins.get(lab, 0), losses.get(lab, 0)
+        lb.append({"strategy": lab, "equity": eq, "realized": eq - 100.0,
+                   "unrealized": 0.0, "n_trades": s.get("trades", 0), "wins": w,
+                   "losses": l, "win_rate": (w / (w + l) if (w + l) else None), "open": None})
+    lb.sort(key=lambda x: x["equity"], reverse=True)
+    return lb, journal
+
+
 def render_shard(game_dir, out_path):
     ticks_path = os.path.join(game_dir, "ticks.jsonl")
     if not os.path.exists(ticks_path):
@@ -72,12 +121,6 @@ def render_shard(game_dir, out_path):
             meta_file = {}
     meta = engine.parse_ticker(meta_file.get("ticker", os.path.basename(game_dir)))
     if not meta:
-        return False
-
-    # replay the captured ticks (real order flow) through all strategies
-    strategies = strat.build(list(strat.REGISTRY))
-    pf = engine.simulate_captured(game_dir, strategies)
-    if pf is None:
         return False
 
     ticks = _read_jsonl(ticks_path)
@@ -113,11 +156,22 @@ def render_shard(game_dir, out_path):
         if wph is not None:
             model_series.append(wph if meta["yes_is_home"] else 1 - wph)
 
-    # live shards auto-refresh in the browser (~30s) and are labeled LIVE; finished
-    # games are static "captured replay" pages.
-    vm = engine.build_vm(meta, market, game, candles, model_series, plays, pf,
-                         "LIVE" if live else "CAPTURED", 30 if live else 0)
-    vm["back_href"] = "../index.html"
+    # leaderboard + journal from the ACTUAL live log (not a re-simulation, which
+    # diverges from the real tick-by-tick decisions) so the shard matches the board.
+    leaderboard, journal = _results_from_log(game_dir, meta_file)
+    implied = market.get("mid") if market.get("mid") is not None else market.get("last_price")
+    wph = game.get("win_prob_home")
+    model = None if wph is None else (wph if meta["yes_is_home"] else 1 - wph)
+    # live shards auto-refresh in the browser (~30s); finished games are static.
+    vm = {
+        "mode": "LIVE" if live else "CAPTURED", "refresh": 30 if live else 0,
+        "yes_team": meta["yes_team"], "game": game, "market": market,
+        "implied_p_yes": implied, "model_p_yes": model,
+        "candles": candles, "model_series": model_series, "plays": plays,
+        "leaderboard": leaderboard, "journal": journal,
+        "generated": datetime.now(timezone.utc).strftime("%H:%M:%S UTC"),
+        "back_href": "../index.html",
+    }
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     dashboard.write(out_path, vm)
     return True
