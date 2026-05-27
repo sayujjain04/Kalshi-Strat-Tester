@@ -18,6 +18,20 @@ path is the single highest-leverage change — without it every board number and
 
 Findings: **🔴 CRITICAL 4 · 🟠 SIGNIFICANT 5 · 🟡 POSITIONING 4 · ⚪ MINOR 3**
 
+## Resolution status (updated 2026-05-27)
+- ✅ **C1 FIXED** — `engine.fill_candle`: fill at the bar that closes after the signal. Every
+  strategy now negative honestly; north-star 0.625 → −5.265 (was a leak). + `metrics.py`
+  excludes <10-trade strategies from "best deployable".
+- ✅ **C2 FIXED** — `historical.backfill_results` filled 240/246 games with Kalshi's official
+  result (+ ESPN cross-check, 0 disagreements); 6 aged out keep ESPN fallback.
+- ✅ **C3 FIXED** — `tradelog.TradeTapeLogger` now evicts the dedup window in true FIFO
+  (`deque`) instead of slicing an unordered `set`; verified 0 re-appends on a rolling feed.
+- ✅ **C4 FIXED** — `.gitattributes` scopes `merge=union` to append-only `*.jsonl` only;
+  rewrite-files (meta/params/docs) use default merge (conflict→abort); `git_sync.sh` drops
+  global `-X union` and gains a post-merge JSON-validation gate that refuses to push corruption.
+- ⏳ **Open:** S1 (repo bloat / history rewrite — needs a coordinated force-push, deferred),
+  S2 (WNBA corpus gap), S3–S5, positioning P1–P4, minors M1–M3.
+
 ---
 
 ## 🔴 CRITICAL — silent correctness / data-integrity

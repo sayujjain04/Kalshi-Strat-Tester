@@ -15,6 +15,7 @@ Each game gets its own folder under data/games/<game_id>/ holding:
 `game_id` is like "20260522_OKC_SAS" (date_away_home).
 """
 import json, os
+from collections import deque
 from datetime import datetime, timezone
 
 _ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -108,7 +109,8 @@ class TradeTapeLogger:
     """Logs each public trade exactly once (deduped). Writes <gdir>/trades.jsonl."""
     def __init__(self, gdir):
         self.path = os.path.join(gdir, "trades.jsonl")
-        self._seen = set()
+        self._seen = set()            # membership
+        self._order = deque()         # insertion order, for true-FIFO eviction
 
     def flush(self, market):
         new = []
@@ -117,14 +119,20 @@ class TradeTapeLogger:
             if k in self._seen:
                 continue
             self._seen.add(k)
+            self._order.append(k)
             new.append(t)
         if not new:
             return
         with open(self.path, "a") as f:
             for t in new:
                 f.write(json.dumps(t) + "\n")
-        if len(self._seen) > 5000:
-            self._seen = set(list(self._seen)[-2000:])
+        # Cap the dedup window, evicting the OLDEST keys. The old code sliced a `set`
+        # (`list(set)[-2000:]`) — unordered, so it dropped ARBITRARY keys; once a game
+        # passed 5000 trades the feed's rolling re-sends of still-recent trades looked
+        # "new" and got re-appended (the C3 110k-line / 8 MB balloon). FIFO is safe
+        # because Kalshi only re-sends recent trades, never long-evicted old ones.
+        while len(self._order) > 5000:
+            self._seen.discard(self._order.popleft())
 
 
 class DecisionLogger:

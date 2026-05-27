@@ -1,0 +1,23 @@
+# Merge policy for the git-as-database setup (see docs/LAB_REVIEW.md C4).
+#
+# The VM capture daemon, the local research cycle, and interactive sessions all push to
+# this repo concurrently. git_sync.sh used to pass `-X union` GLOBALLY, which union-merges
+# every conflicting file. That is correct ONLY for append-only event streams (both sides'
+# appended lines survive). For full-rewrite single-object files it CONCATENATES the two
+# versions into invalid JSON / interleaved markdown. So union is scoped here per-path, and
+# `-X union` was removed from git_sync.sh.
+
+# Append-only event streams → union-merge (concurrent appends both survive).
+data/**/*.jsonl merge=union
+
+# Everything else uses the DEFAULT merge. In particular the full-rewrite single-object
+# files below must NOT union-merge — a real conflict there must produce conflict markers
+# (which aborts the rebase in git_sync.sh) instead of silently corrupting:
+#   data/games/*/meta.json, strategy_params.json, docs/*.html, docs/*.md
+# These are listed explicitly as a guard in case a broad union attr is ever re-added.
+**/meta.json   merge=text
+strategy_params.json merge=text
+docs/**        merge=text
+
+# The durable corpus is gzipped → binary; never attempt a text/union merge.
+*.gz binary
