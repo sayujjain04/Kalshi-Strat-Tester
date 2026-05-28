@@ -1,139 +1,173 @@
-# X thread: the Kalshi lab story
+# X thread: the Kalshi lab story (daily log version)
 
-Tip: each post has a [chart] note for what to attach. The numbers are the hook, the chart
-makes people stop scrolling. Most charts are one screenshot of a table or one line plot from
-the open data.
-
----
-
-**1/**
-i built an autonomous AI lab to beat Kalshi sports betting markets with real money.
-
-it ran for weeks. tested 5 different ways to win. the market beat every single one.
-
-here is the whole story, every dead end, and all 303 games of data, open. 🧵
-
-[chart: a clean title card, or a screenshot of the live dashboard board]
+Charts live in `docs/charts/`. The [attach: file.png] note tells you which image goes on
+which post. Voice is raw, no dashes.
 
 ---
 
-**2/**
-the setup was simple and i was sure it would work.
+**1/ the hook**
 
-ESPN gives away a live win probability for every game, for free. Kalshi has a live price for
-the same game. when they disagree, bet the gap. print money.
+i built an autonomous AI lab to find a real money making edge in prediction markets.
 
-so i built the machine to do it automatically.
+i gave it a quant's brain, every tick of real market data, and a single instruction: go find
+the edge, and do not lie to yourself.
 
-[chart: one game's timeline with two lines, ESPN win prob and the Kalshi price, moving together]
+then i let it run for weeks. this is the daily log. every experiment, every dead end, the one
+bug that almost fooled me, all of it. 🧵
 
----
-
-**3/**
-the machine:
-
-a daemon on a free google cloud box watching every NBA + WNBA game live, saving every tick.
-a fee aware backtester. a 303 game dataset (price, play by play, win prob, order flow,
-results). and an AI that wakes up daily and tries new strategies on its own.
-
-[chart: screenshot of the data inventory / 303 games on disk]
+[attach: 07_overview.png]
 
 ---
 
-**4/**
-then the gut punch.
+**2/ what it actually is**
 
-i measured who is sharper, ESPN or the market, with a Brier score (lower = better).
+not a strategy. a whole machine.
 
-ESPN: 0.1181
-Kalshi: 0.1181
+a capture daemon living on a free google cloud box, awake 24/7, recording every NBA and WNBA
+game tick by tick. a fee aware backtester that replays a finished game second by second. and
+an AI research loop that wakes up daily, tries an idea, and is graded against one number.
 
-identical. the market already knows everything ESPN knows. the gap i wanted to trade is not
-information. it is noise.
-
-[chart: the calibration table, ESPN vs Kalshi Brier side by side]
+it is keyed to do exactly one thing: get less wrong over time.
 
 ---
 
-**5/**
-here is the part that still makes me sweat.
+**3/ the rules i fed it**
 
-my backtest had a junk strategy in it. on purpose. it is supposed to LOSE. it exists to prove
-the test is honest.
+before it could touch anything i gave it an operating charter. the core of it:
 
-it was showing +$11 per game.
+calibration first. disconfirmation first. every edge is guilty until proven innocent. a clean
+win rate on a small sample is a red flag, not a green light.
 
-that is not a win. that is a smoke alarm. if your known bad strategy prints money, your test
-is lying to you.
-
-[chart: bar showing the control strategy at +11.82, flagged red]
+basically: act like the smartest skeptic in the room, especially about your own ideas.
 
 ---
 
-**6/**
-the bug was time travel.
+**4/ the data moat**
 
-when a team scored, the win prob updated instantly, but my price data was a 1 minute bar that
-could be 60 seconds stale. so the bot was buying at a price from BEFORE the play. a price
-nobody could actually get.
+you cannot find an edge you cannot measure, so step one was just collecting everything.
 
-it was peeking at the past and calling it skill.
+303 settled games. each one saved with its price candles, the full ESPN play by play, the
+live win probability, the condensed order flow, and the official result.
 
-[chart: a diagram, signal at T, but filling at the price from T minus 60s]
+this is the foundation. it is open. link at the end.
 
----
-
-**7/**
-i fixed it. you now fill at the price that comes AFTER your signal, the one you could really
-trade.
-
-every strategy went negative. including the ones that looked like winners.
-
-control strategy: +11.82 became negative 10.45.
-
-best lesson of the whole project: leaks do not just give you a wrong number, they give you a
-flattering one. and flattering numbers get funded.
-
-[chart: before vs after table, every strategy flipping from green to red]
+[attach: 07_overview.png]
 
 ---
 
-**8/**
-once the engine was honest i went down the list.
+**5/ Experiment 1: the obvious idea**
 
-WNBA (thinner market): still efficient.
-arb vs the DraftKings line (ESPN hands it to you free): Kalshi tracks it within 2 cents over
-294 games, never off by more than 4.
-scalping the swings: price is a coin flip, you cannot fade it.
+ESPN gives a live win probability for every game, free. Kalshi has a live price for the same
+game. my whole thesis: when they disagree, bet the gap.
 
-every door, locked.
+here is one game. the blue line is ESPN's win prob, the orange is the Kalshi price.
 
-[chart: histogram of Kalshi vs DraftKings price gaps, almost all under 2 cents]
+watch how tightly they move together. that was the first bad sign.
 
----
-
-**9/**
-the only thing with a real edge was market making. dont predict anything, just quote both
-sides and earn the spread.
-
-gross edge: about +0.35 cents per contract. real!
-then Kalshi takes a maker fee.
-net: about +0.07 cents. technically positive. too thin to be a business.
-
-[chart: the fee sensitivity table, edge shrinking as the fee grows]
+[attach: 01_winprob_vs_price.png]
 
 ---
 
-**10/**
-what i actually learned:
+**6/ Experiment 1 result: the gut punch**
 
-the market is smart. anything free on ESPN, 10,000 people see too, and the price ate it.
+i measured who is actually sharper with a Brier score (lower is better). plotted the
+reliability curve: predicted chance on the x axis, what actually happened on the y.
+
+ESPN: 0.1181. Kalshi: 0.1181. identical to four decimals. both lines sit right on top of
+perfect calibration.
+
+the market already knows everything ESPN knows. the gap is not a signal. it is noise.
+
+[attach: 02_calibration.png]
+
+---
+
+**7/ the bug that almost fooled me**
+
+while the real strategies came back flat, my backtest had a junk control strategy in it. on
+purpose. it is supposed to LOSE. it proves the test is honest.
+
+it was showing plus 11 dollars a game.
+
+a known junk strategy printing money is not a discovery. it is a smoke alarm. it means your
+test is lying to you.
+
+[attach: 03_the_leak.png]
+
+---
+
+**8/ the leak, in detail**
+
+the bug was time. when a team scored, the win prob updated instantly, but my price data was a
+one minute bar that could be 60 seconds stale.
+
+so the bot was buying at a price from BEFORE the play. a price nobody could trade anymore. it
+was peeking into the past and calling it skill.
+
+i fixed it: fill at the price that comes AFTER your signal. every strategy went negative.
+
+biggest lesson of the whole project: leaks do not give you a wrong number, they give you a
+flattering one. and a flattering number gets funded.
+
+---
+
+**9/ Experiment 2: order flow**
+
+okay the gap is dead. but maybe speed wins. maybe the actual buying and selling predicts the
+next little move. i had every trade, so i checked.
+
+forward return after a flow burst, at 30, 60, 120 seconds: basically zero. noise.
+
+the price reacts to a flood of buying in about zero seconds. by the time you see the flow, the
+move already happened.
+
+[attach: 04_flow.png]
+
+---
+
+**10/ Experiment 3: arbitrage**
+
+new angle. ESPN quietly hands you the DraftKings line for free. so i de vigged it and compared
+it to Kalshi. if they disagree, that is free money.
+
+across 294 games they agree within about 1 cent on average, and never more than 4. the fee to
+trade is bigger than the gap. no arb. Kalshi was even a hair sharper than the book.
+
+[attach: 05_cross_venue.png]
+
+---
+
+**11/ Experiment 4: market making**
+
+last idea. stop predicting. just quote both sides and earn the spread, like a tiny casino.
+
+this one actually had a real edge. about plus 0.35 cents per contract gross. but Kalshi takes
+a maker fee, and at their real rate it nets to about plus 0.07 cents.
+
+technically positive. way too thin to be a business. the fee gate kills it.
+
+[attach: 06_market_making.png]
+
+---
+
+**12/ what i actually learned**
+
+the market is smart. annoyingly, completely smart. anything free on ESPN, ten thousand people
+see, and the price ate it. a popular liquid market is not where a solo person finds free money.
 
 leaks flatter you. build your test to embarrass itself.
 
-and knowing where the money is NOT is worth a lot. i have a clean map of 5 dead ends now.
+and knowing where the money is NOT is worth a lot. i have a clean map of five dead ends now.
 
-system + all 303 games, open: github.com/sayujjain04/Kalshi-Strat-Tester
+---
 
-we built a machine to find treasure and drew a very good map of where it is not. that is most
-of the job. (the part that is not a dead end, i am keeping quiet for now.) 🌦️
+**13/ so did it work**
+
+not on sports. and proving that, rigorously, IS the result.
+
+but the same logic that killed sports points somewhere better. not a market everyone watches.
+a market governed by something you can actually model, that the sharps ignore. i found a lead
+there. heads down on it now, quietly. 🌦️
+
+the full system and all 303 games are open. go check my work, tell me where i am wrong:
+github.com/sayujjain04/Kalshi-Strat-Tester
