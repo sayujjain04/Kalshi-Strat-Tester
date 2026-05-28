@@ -1,9 +1,1 @@
-{
- "game_id": "20260527_WNBA_WSH_SEA",
- "ticker": "KXWNBAGAME-26MAY27WSHSEA-WSH",
- "mode": "paper",
- "away": "WSH",
- "home": "SEA",
- "date": "20260527",
- "yes_team": "WSH"
-}
+{"game_id": "20260527_WNBA_WSH_SEA", "ticker": "KXWNBAGAME-26MAY27WSHSEA-WSH", "mode": "paper", "away": "WSH", "home": "SEA", "date": "20260527", "yes_team": "WSH", "final_status": "post", "kalshi_result": "yes", "final_score": {"home": 0, "away": 0}}
