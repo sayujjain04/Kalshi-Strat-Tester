@@ -24,7 +24,8 @@ data. That last part will become important.
 
 A **data moat**. Every settled game gets saved as a single gzipped record: price candles,
 play by play, win probability per play, the condensed order flow, and the official Kalshi
-result. We ended up with 303 games on disk, 246 NBA and 57 WNBA, all open in the repo.
+result. We ended up with 303 games on disk, 246 NBA and 57 WNBA, all open in
+[the repo](https://github.com/sayujjain04/Kalshi-Strat-Tester).
 
 ![the data moat: 303 games](charts/07_overview.png)
 
