@@ -1,9 +1,1 @@
-{
- "game_id": "20260527_WNBA_PHX_NY",
- "ticker": "KXWNBAGAME-26MAY27PHXNY-PHX",
- "mode": "paper",
- "away": "PHX",
- "home": "NY",
- "date": "20260527",
- "yes_team": "PHX"
-}
+{"game_id": "20260527_WNBA_PHX_NY", "ticker": "KXWNBAGAME-26MAY27PHXNY-PHX", "mode": "paper", "away": "PHX", "home": "NY", "date": "20260527", "yes_team": "PHX", "final_status": "post", "kalshi_result": "no", "final_score": {"home": 0, "away": 0}}
