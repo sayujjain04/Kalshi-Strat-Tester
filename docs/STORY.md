@@ -26,6 +26,8 @@ A **data moat**. Every settled game gets saved as a single gzipped record: price
 play by play, win probability per play, the condensed order flow, and the official Kalshi
 result. We ended up with 303 games on disk, 246 NBA and 57 WNBA, all open in the repo.
 
+![the data moat: 303 games](charts/07_overview.png)
+
 And a **research loop**. A headless AI wakes up daily, reads how the lab is doing on one
 single north star metric, and tries one new idea. The goal was a system that improves
 itself.
@@ -43,6 +45,15 @@ Before writing the strategy I asked the only question that matters: **is ESPN ac
 better than the market?** If they are equally calibrated, there is nothing to trade. The
 "gap" is just noise around a shared best estimate.
 
+Here is a real game from the corpus, Lakers at Heat. The blue line is ESPN's win probability,
+the orange is the Kalshi market price, plotted over the same minutes. Lakers crash to 15%,
+recover, and win. Watch how tightly the two lines move together.
+
+![ESPN win prob vs Kalshi price on a real comeback game](charts/01_winprob_vs_price.png)
+
+The "gap" you were going to trade is the thin space between those two lines. That should
+make you nervous.
+
 ## How you measure "who is sharper": the Brier score
 
 If you predict 70% chance and the team wins, your error is 0.30. If you predict 70% and they
@@ -59,6 +70,8 @@ Brier for the ESPN win prob: **0.1181.**
 Identical to four decimal places. I plotted the reliability curve (predicted chance on the
 x axis, actual win rate on the y axis) and both lines sit right on top of perfect
 calibration, almost on top of each other.
+
+![calibration: Kalshi vs ESPN, both right on the diagonal](charts/02_calibration.png)
 
 That is a result. The market has already eaten everything ESPN's model knows. The gap is
 not information. Trading it is trading noise around a shared estimate. Game over for the
@@ -115,6 +128,8 @@ What happened to the numbers:
 | auto_house (was the "winner") | +$2.82/game | negative $0.56/game |
 | wp_momentum | +$0.61/game | negative $6.32/game |
 
+![the leak: every strategy flips from green to red after the fix](charts/03_the_leak.png)
+
 The junk strategy flipped from plus 11.82 to negative 10.45. That is the signature of a
 clean fix. Anti edges should lose money once you stop letting them peek. The fact that they
 do is how you know the engine is honest now.
@@ -164,6 +179,8 @@ After paying the spread to enter and exit, the strategy nets about negative 3 ce
 trade. The market absorbs the information in trades essentially instantly. There is nothing
 left to scalp.
 
+![flow does not predict the next move: gross return sits in the noise band](charts/04_flow.png)
+
 This is itself a finding. Liquid prediction markets have very fast information processing
 at the microstructure level. If there were a slow informed flow signal, it would show up at
 positive lag in the cross correlation. It does not.
@@ -195,6 +212,8 @@ to capture it, and on average it was way smaller.
 And the Brier scores: Kalshi 0.1928, DraftKings 0.1929. Kalshi was actually a hair
 sharper than the book.
 
+![Kalshi vs DraftKings: gaps tiny, below the fee hurdle](charts/05_cross_venue.png)
+
 That is two independent witnesses telling me the same thing: Kalshi prices NBA games
 correctly, by every measure I can run.
 
@@ -225,6 +244,8 @@ times P times (1 minus P). That works out to about 0.28 cents per contract on av
 
 So net per contract: plus 0.35 cents gross, minus 0.28 cents fee, equals **plus 0.07 cents
 net**. Technically positive. Too thin to be a business.
+
+![market making: a real edge, but the maker fee eats almost all of it](charts/06_market_making.png)
 
 This is a real category of finding, not a failure. The edge exists. It is the venue's fee
 that makes it not worth chasing. If Kalshi exempted makers (as some exchanges do for
